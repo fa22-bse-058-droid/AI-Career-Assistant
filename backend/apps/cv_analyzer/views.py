@@ -83,7 +83,7 @@ class CVStatusView(APIView):
                 analysis = cache.get(cache_key)
                 if analysis is None:
                     analysis = CVAnalysisSerializer(cv.analysis).data
-                    cache.set(cache_key, analysis)  # Cache indefinitely until new upload
+                    cache.set(cache_key, analysis, timeout=86400)  # 24 hours
                 data["analysis"] = analysis
             except CVAnalysis.DoesNotExist:
                 pass

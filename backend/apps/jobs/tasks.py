@@ -7,6 +7,20 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
+# Lazy singleton — load MiniLM once per worker process
+_sentence_model = None
+
+
+def _get_sentence_model():
+    global _sentence_model
+    if _sentence_model is None:
+        try:
+            from sentence_transformers import SentenceTransformer
+            _sentence_model = SentenceTransformer("all-MiniLM-L6-v2")
+        except Exception as e:
+            logger.error("Failed to load SentenceTransformer: %s", e)
+    return _sentence_model
+
 
 @shared_task(
     bind=True,
@@ -138,9 +152,12 @@ def compute_job_matches_for_user(user_id: str):
             "id", "title", "description", "skills_required"
         )
 
-        # Import sentence-transformers (preloaded at startup)
-        from sentence_transformers import SentenceTransformer, util
-        model = SentenceTransformer("all-MiniLM-L6-v2")
+        # Use lazy-loaded singleton model
+        model = _get_sentence_model()
+        if model is None:
+            logger.error("Sentence model not available for job matching")
+            return
+        from sentence_transformers import util
 
         user_embedding = model.encode(user_skills, convert_to_tensor=True)
 

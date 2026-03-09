@@ -68,7 +68,7 @@ export default function LoginPage() {
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-accent-blue to-accent-purple flex items-center justify-center mx-auto mb-6">
             <span className="text-white font-black text-2xl">AI</span>
           </div>
-          <h2 className="text-3xl font-bold text-white mb-4">AI Career Platform</html>
+          <h2 className="text-3xl font-bold text-white mb-4">AI Career Platform</h2>
           <p className="text-slate-400 max-w-sm">
             Your intelligent career assistant powered by cutting-edge AI
           </p>

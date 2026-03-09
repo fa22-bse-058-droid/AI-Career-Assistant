@@ -124,8 +124,10 @@ export default function CVAnalyzerPage() {
     queryKey: ['cv-status', uploadedCvId],
     queryFn: () => api.get(`/cv/${uploadedCvId}/status/`).then((r) => r.data),
     enabled: !!uploadedCvId,
-    refetchInterval: (data) =>
-      data?.status === 'processing' || data?.status === 'pending' ? 2000 : false,
+    refetchInterval: (query) => {
+      const d = query.state.data as any
+      return d?.status === 'processing' || d?.status === 'pending' ? 2000 : false
+    },
   })
 
   const onDrop = useCallback((acceptedFiles: File[]) => {

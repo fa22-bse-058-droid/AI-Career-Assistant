@@ -61,11 +61,11 @@ class RecommendedResourcesView(APIView):
             if not missing_skills:
                 return Response([])
 
-            # Find resources matching missing skills
+            # Find resources matching missing skills (icontains works with JSONField stored as text)
             recommendations = {}
             for skill in list(missing_skills)[:10]:
                 resources = Resource.objects.filter(
-                    skill_tags__contains=[skill]
+                    skill_tags__icontains=skill
                 ).order_by("is_free", "-rating")[:5]
                 if resources.exists():
                     recommendations[skill] = ResourceSerializer(resources, many=True).data

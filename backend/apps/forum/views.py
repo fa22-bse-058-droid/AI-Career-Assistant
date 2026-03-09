@@ -107,11 +107,13 @@ class LikePostView(APIView):
         like, created = PostLike.objects.get_or_create(post=post, user=request.user)
         if not created:
             like.delete()
+            # Refresh count from DB after deletion
             return Response({"liked": False, "likes": post.likes.count()})
         # Award points to post author
         if post.author != request.user:
             points, _ = UserPoints.objects.get_or_create(user=post.author)
             points.award_points(2, "Received a like on post")
+        # Refresh count from DB after creation
         return Response({"liked": True, "likes": post.likes.count()})
 
 

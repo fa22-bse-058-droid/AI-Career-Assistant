@@ -51,10 +51,10 @@ api.interceptors.response.use(
           refresh: refreshToken,
         })
         const newAccessToken = data.access
-        const newRefreshToken = data.refresh || refreshToken
+        const newRefreshToken = data.refresh || refreshToken || ''
 
         if (user) {
-          setAuth(user, newAccessToken, newRefreshToken!)
+          setAuth(user, newAccessToken, newRefreshToken)
         }
 
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`

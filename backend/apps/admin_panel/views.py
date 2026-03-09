@@ -20,6 +20,30 @@ from .models import AuditLog
 from .serializers import AuditLogSerializer, AdminUserSerializer, AdminStatsSerializer
 
 
+def _get_scraper_health() -> dict:
+    """Get latest scraper log per source — MySQL compatible."""
+    from apps.jobs.models import ScraperLog
+    from django.db.models import Max
+
+    # Get latest started_at per source
+    latest_per_source = (
+        ScraperLog.objects.values("source")
+        .annotate(latest=Max("started_at"))
+    )
+    health = {}
+    for row in latest_per_source:
+        log = ScraperLog.objects.filter(
+            source=row["source"], started_at=row["latest"]
+        ).first()
+        if log:
+            health[log.source] = {
+                "last_run": str(log.started_at),
+                "status": log.status,
+                "jobs_added": log.jobs_added,
+            }
+    return health
+
+
 def log_admin_action(admin, action, target_model="", target_id="", details=None, ip=None):
     AuditLog.objects.create(
         admin=admin,
@@ -95,14 +119,7 @@ class AdminStatsView(APIView):
             "users_by_role": dict(
                 CustomUser.objects.values("role").annotate(count=Count("id")).values_list("role", "count")
             ),
-            "scraper_health": {
-                s.source: {
-                    "last_run": str(s.started_at),
-                    "status": s.status,
-                    "jobs_added": s.jobs_added,
-                }
-                for s in ScraperLog.objects.order_by("source", "-started_at").distinct("source")
-            } if hasattr(ScraperLog, "objects") else {},
+            "scraper_health": _get_scraper_health(),
         }
 
         cache.set(cache_key, data, timeout=3600)

@@ -6,6 +6,20 @@ from typing import List
 
 logger = logging.getLogger(__name__)
 
+# Lazy singleton — loaded once on first use
+_sentence_model = None
+
+
+def _get_sentence_model():
+    global _sentence_model
+    if _sentence_model is None:
+        try:
+            from sentence_transformers import SentenceTransformer
+            _sentence_model = SentenceTransformer("all-MiniLM-L6-v2")
+        except Exception as e:
+            logger.error("Failed to load SentenceTransformer: %s", e)
+    return _sentence_model
+
 
 def evaluate_response(
     user_response: str,
@@ -31,8 +45,10 @@ def evaluate_response(
 
     # Semantic similarity
     try:
-        from sentence_transformers import SentenceTransformer, util
-        model = SentenceTransformer("all-MiniLM-L6-v2")
+        model = _get_sentence_model()
+        if model is None:
+            raise RuntimeError("Sentence model not available")
+        from sentence_transformers import util
         user_emb = model.encode(user_response, convert_to_tensor=True)
         answer_emb = model.encode(model_answer, convert_to_tensor=True)
         semantic_score = float(util.cos_sim(user_emb, answer_emb)[0][0]) * 100.0

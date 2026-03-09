@@ -15,6 +15,23 @@ SYSTEM_PROMPT = (
     "CV writing, interview preparation, and career advice. Be concise and helpful."
 )
 
+# Lazy-loaded model singletons — loaded once per worker process
+_chatbot_tokenizer = None
+_chatbot_model = None
+
+
+def _get_chatbot_models():
+    global _chatbot_tokenizer, _chatbot_model
+    if _chatbot_tokenizer is None:
+        try:
+            from transformers import BlenderbotTokenizer, BlenderbotForConditionalGeneration
+            model_name = "facebook/blenderbot-400M-distill"
+            _chatbot_tokenizer = BlenderbotTokenizer.from_pretrained(model_name)
+            _chatbot_model = BlenderbotForConditionalGeneration.from_pretrained(model_name)
+        except Exception as e:
+            logger.warning("BlenderBot not available: %s", e)
+    return _chatbot_tokenizer, _chatbot_model
+
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -97,10 +114,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def generate_response(self, user_message: str, history: list) -> str:
         """Generate AI response using BlenderBot or DialoGPT."""
         try:
-            from transformers import BlenderbotTokenizer, BlenderbotForConditionalGeneration
             import torch
-
-            model_name = "facebook/blenderbot-400M-distill"
+            tokenizer, model = _get_chatbot_models()
+            if tokenizer is None or model is None:
+                raise RuntimeError("Model not available")
 
             # Build context from history
             context = ""
@@ -108,10 +125,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 context += f"{'Person' if role == 'user' else 'Bot'}: {content}\n"
 
             full_input = f"{SYSTEM_PROMPT}\n\n{context}Person: {user_message}\nBot:"
-
-            # Use cached model if available
-            tokenizer = BlenderbotTokenizer.from_pretrained(model_name)
-            model = BlenderbotForConditionalGeneration.from_pretrained(model_name)
 
             inputs = tokenizer(
                 [full_input[:512]],

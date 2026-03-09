@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   LayoutDashboard, FileText, Briefcase, MessageCircle, BookOpen,
@@ -25,6 +25,7 @@ const navItems = [
 
 export default function Layout() {
   const [collapsed, setCollapsed] = useState(false)
+  const location = useLocation()
   const { user, clearAuth, refreshToken } = useAuthStore()
   const navigate = useNavigate()
 

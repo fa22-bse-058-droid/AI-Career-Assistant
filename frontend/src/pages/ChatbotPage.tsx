@@ -39,8 +39,12 @@ export default function ChatbotPage() {
     queryFn: () =>
       api.get(`/chat/conversations/${currentConvId}/history/`).then((r) => r.data),
     enabled: !!currentConvId,
-    onSuccess: (data: any[]) => setMessages(data || []),
-  } as any)
+  })
+
+  // Sync history to messages when loaded
+  useEffect(() => {
+    if (history) setMessages(history as any[])
+  }, [history])
 
   useEffect(() => {
     if (accessToken) {
