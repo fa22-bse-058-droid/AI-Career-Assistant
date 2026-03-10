@@ -1,1 +1,1 @@
-# virtual-memory-simulator
+# AI Career Assistant
