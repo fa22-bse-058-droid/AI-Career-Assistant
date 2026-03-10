@@ -1,0 +1,94 @@
+services:
+  db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-career_platform}
+      MYSQL_USER: ${DB_USER:-career_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-career_password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  backend:
+    build: ./backend
+    restart: always
+    env_file:
+      - ./backend/.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - ./backend:/app
+      - static_files:/app/staticfiles
+      - media_files:/app/media
+
+  celery:
+    build: ./backend
+    command: celery -A career_platform worker -l info
+    restart: always
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - backend
+      - redis
+    volumes:
+      - ./backend:/app
+
+  celery-beat:
+    build: ./backend
+    command: celery -A career_platform beat -l info
+    restart: always
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - backend
+      - redis
+    volumes:
+      - ./backend:/app
+
+  fastapi_service:
+    build: ./fastapi_service
+    restart: always
+    ports:
+      - "8001:8001"
+    env_file:
+      - ./fastapi_service/.env
+    depends_on:
+      - backend
+
+  frontend:
+    build: ./frontend
+    restart: always
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  mysql_data:
+  redis_data:
+  static_files:
+  media_files:
