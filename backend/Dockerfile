@@ -31,6 +31,11 @@ COPY . .
 
 RUN python -m spacy download en_core_web_sm
 
+RUN chmod +x /app/entrypoint.sh
+
+RUN echo "Migration will use --fake-initial flag"
+
 EXPOSE 8000
 
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["gunicorn", "career_platform.asgi:application", "--worker-class", "uvicorn.workers.UvicornWorker", "--workers", "2", "--bind", "0.0.0.0:8000", "--timeout", "120"]
