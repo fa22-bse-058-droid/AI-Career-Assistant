@@ -135,7 +135,7 @@ export default function LandingPage() {
           </motion.p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature, i) => (
+            {features.map((feature) => (
               <motion.div
                 key={feature.title}
                 variants={itemVariants}

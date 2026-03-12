@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Upload, FileText, CheckCircle, XCircle, AlertCircle, RefreshCw } from 'lucide-react'
+import { useQuery, useMutation } from '@tanstack/react-query'
+import { Upload, XCircle, RefreshCw } from 'lucide-react'
 import api from '@/api/axios'
 
 function ScoreGauge({ score, grade }: { score: number; grade: string }) {
@@ -104,7 +104,6 @@ function SkillTag({ skill, category }: { skill: string; category: string }) {
 
 export default function CVAnalyzerPage() {
   const [uploadedCvId, setUploadedCvId] = useState<string | null>(null)
-  const queryClient = useQueryClient()
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -120,7 +119,7 @@ export default function CVAnalyzerPage() {
     },
   })
 
-  const { data: cvStatus, refetch: refetchStatus } = useQuery({
+  const { data: cvStatus } = useQuery({
     queryKey: ['cv-status', uploadedCvId],
     queryFn: () => api.get(`/cv/${uploadedCvId}/status/`).then((r) => r.data),
     enabled: !!uploadedCvId,

@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useState, useEffect, useRef } from 'react'
-import { Send, Plus, Trash2 } from 'lucide-react'
+import { Send, Plus } from 'lucide-react'
 import api from '@/api/axios'
 import { useAuthStore } from '@/store/authStore'
 

@@ -1,6 +1,7 @@
 """
 Serializers for authentication app.
 """
+import re
 from django.contrib.auth import authenticate
 from django.utils import timezone
 from django.conf import settings
@@ -15,7 +16,6 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
         fields = [
-            "avatar", "bio", "university", "graduation_year",
             "target_role", "phone", "linkedin_url", "github_url",
             "created_at", "updated_at",
         ]
@@ -28,8 +28,9 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = [
-            "id", "email", "username", "first_name", "last_name",
-            "role", "is_active", "date_joined", "profile",
+            "id", "email", "full_name", "role", "profile_picture",
+            "bio", "university", "graduation_year",
+            "is_active", "date_joined", "profile",
         ]
         read_only_fields = ["id", "role", "is_active", "date_joined"]
 
@@ -44,7 +45,30 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ["email", "username", "first_name", "last_name", "password", "password_confirm", "role"]
+        fields = ["email", "full_name", "password", "password_confirm", "role",
+                  "university", "graduation_year"]
+        extra_kwargs = {
+            "university": {"required": False, "allow_blank": True},
+            "graduation_year": {"required": False, "allow_null": True},
+        }
+
+    def validate_email(self, value):
+        if CustomUser.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value.lower()
+
+    def validate_password(self, value):
+        if len(value) < 8:
+            raise serializers.ValidationError("Password must be at least 8 characters.")
+        if not re.search(r"[A-Z]", value):
+            raise serializers.ValidationError(
+                "Password must contain at least one uppercase letter."
+            )
+        if not re.search(r"\d", value):
+            raise serializers.ValidationError(
+                "Password must contain at least one number."
+            )
+        return value
 
     def validate(self, data):
         if data["password"] != data.pop("password_confirm"):

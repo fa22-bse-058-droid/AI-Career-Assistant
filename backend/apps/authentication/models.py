@@ -33,10 +33,14 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(_("email address"), unique=True)
-    username = models.CharField(max_length=150, unique=True)
-    first_name = models.CharField(max_length=150, blank=True)
-    last_name = models.CharField(max_length=150, blank=True)
+    full_name = models.CharField(_("full name"), max_length=255)
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.STUDENT)
+    profile_picture = models.ImageField(
+        upload_to="profile_pictures/%Y/%m/", null=True, blank=True
+    )
+    bio = models.TextField(_("bio"), max_length=500, blank=True)
+    university = models.CharField(_("university"), max_length=200, blank=True)
+    graduation_year = models.IntegerField(_("graduation year"), null=True, blank=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
@@ -45,7 +49,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     lockout_until = models.DateTimeField(null=True, blank=True)
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["username"]
+    REQUIRED_FIELDS = ["full_name"]
 
     objects = CustomUserManager()
 
@@ -60,9 +64,11 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
-    @property
-    def full_name(self):
-        return f"{self.first_name} {self.last_name}".strip() or self.email
+    def get_full_name(self):
+        return self.full_name or self.email
+
+    def get_short_name(self):
+        return self.full_name.split()[0] if self.full_name else self.email
 
     def is_locked_out(self):
         if self.lockout_until and timezone.now() < self.lockout_until:
@@ -85,13 +91,11 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
 
 class UserProfile(models.Model):
+    """Extended profile fields supplementing CustomUser."""
+
     user = models.OneToOneField(
         CustomUser, on_delete=models.CASCADE, related_name="profile"
     )
-    avatar = models.ImageField(upload_to="avatars/%Y/%m/", null=True, blank=True)
-    bio = models.TextField(max_length=500, blank=True)
-    university = models.CharField(max_length=200, blank=True)
-    graduation_year = models.IntegerField(null=True, blank=True)
     target_role = models.CharField(max_length=200, blank=True)
     phone = models.CharField(max_length=20, blank=True)
     linkedin_url = models.URLField(blank=True)
