@@ -33,7 +33,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(_("email address"), unique=True)
-    full_name = models.CharField(_("full name"), max_length=255, blank=True)
+    full_name = models.CharField(_("full name"), max_length=255)
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.STUDENT)
     profile_picture = models.ImageField(
         upload_to="profile_pictures/%Y/%m/", null=True, blank=True

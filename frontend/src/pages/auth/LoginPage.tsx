@@ -272,8 +272,7 @@ export default function LoginPage() {
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -10 }}
-                  className="mb-6"
-                  style={{ animation: 'shake 0.4s ease-in-out' }}
+                  className="mb-6 shake"
                 >
                   <div
                     className="p-4 rounded-xl"
@@ -379,16 +378,6 @@ export default function LoginPage() {
           </div>
         </motion.div>
       </div>
-
-      <style>{`
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          20%       { transform: translateX(-8px); }
-          40%       { transform: translateX(8px); }
-          60%       { transform: translateX(-5px); }
-          80%       { transform: translateX(5px); }
-        }
-      `}</style>
     </div>
   )
 }
