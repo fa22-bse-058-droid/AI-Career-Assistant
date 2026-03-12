@@ -26,12 +26,12 @@ const navItems = [
 export default function Layout() {
   const [collapsed, setCollapsed] = useState(false)
   const location = useLocation()
-  const { user, clearAuth, refreshToken } = useAuthStore()
+  const { user, clearAuth } = useAuthStore()
   const navigate = useNavigate()
 
   const handleLogout = async () => {
     try {
-      await api.post('/auth/logout/', { refresh: refreshToken })
+      await api.post('/auth/logout/', {})
     } catch {}
     clearAuth()
     navigate('/login')

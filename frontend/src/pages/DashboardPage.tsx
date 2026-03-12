@@ -73,7 +73,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-3xl font-bold text-white">
             Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'},{' '}
-            <span className="gradient-text">{user?.first_name || user?.username}</span> 👋
+            <span className="gradient-text">{user?.full_name?.split(' ')[0] || user?.email}</span> 👋
           </h1>
           <p className="text-slate-400 mt-1">Here's your career progress overview</p>
         </div>

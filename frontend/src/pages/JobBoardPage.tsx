@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Briefcase, MapPin, Building2, Clock, ExternalLink, Bookmark, BookmarkCheck, Star } from 'lucide-react'
+import { Briefcase, MapPin, Building2, Clock, ExternalLink } from 'lucide-react'
 import api from '@/api/axios'
 
 function MatchRing({ score }: { score: number }) {

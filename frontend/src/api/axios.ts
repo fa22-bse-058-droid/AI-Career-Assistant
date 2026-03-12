@@ -4,12 +4,13 @@ import { useAuthStore } from '@/store/authStore'
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
   timeout: 30000,
+  withCredentials: true, // send httpOnly cookie with refresh token
   headers: {
     'Content-Type': 'application/json',
   },
 })
 
-// Request interceptor — attach JWT
+// Request interceptor — attach JWT from memory
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = useAuthStore.getState().accessToken
   if (token) {
@@ -46,15 +47,19 @@ api.interceptors.response.use(
       isRefreshing = true
 
       try {
-        const { refreshToken, setAuth, user } = useAuthStore.getState()
-        const { data } = await axios.post('/api/auth/token/refresh/', {
-          refresh: refreshToken,
-        })
+        // Refresh token is stored in httpOnly cookie, sent automatically
+        const { data } = await axios.post(
+          '/api/auth/token/refresh/',
+          {},
+          { withCredentials: true }
+        )
         const newAccessToken = data.access
-        const newRefreshToken = data.refresh || refreshToken || ''
+        const { setAccessToken, user, setAuth } = useAuthStore.getState()
 
         if (user) {
-          setAuth(user, newAccessToken, newRefreshToken)
+          setAuth(user, newAccessToken)
+        } else {
+          setAccessToken(newAccessToken)
         }
 
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
