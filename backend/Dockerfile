@@ -33,8 +33,4 @@ RUN python -m spacy download en_core_web_sm
 
 EXPOSE 8000
 
-CMD ["gunicorn", "career_platform.asgi:application", \
-     "--worker-class", "uvicorn.workers.UvicornWorker", \
-     "--workers", "4", \
-     "--bind", "0.0.0.0:8000", \
-     "--timeout", "120"]
+CMD ["gunicorn", "career_platform.asgi:application", "--worker-class", "uvicorn.workers.UvicornWorker", "--workers", "2", "--bind", "0:8000", "--timeout", "120"]
