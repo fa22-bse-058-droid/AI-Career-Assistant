@@ -53,14 +53,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: >
-      sh -c "python manage.py migrate --noinput &&
-             python manage.py collectstatic --noinput &&
-             gunicorn career_platform.asgi:application
-             --worker-class uvicorn.workers.UvicornWorker
-             --workers 4
-             --bind 0.0.0.0:8000
-             --timeout 120"
+    command: sh -c "python manage.py migrate --fake-initial 2>/dev/null; python manage.py migrate --run-syncdb 2>/dev/null; python manage.py collectstatic --noinput; gunicorn career_platform.asgi:application --worker-class uvicorn.workers.UvicornWorker --workers 4 --bind 0.0.0.0:8000 --timeout 120"
     expose:
       - "8000"
 
