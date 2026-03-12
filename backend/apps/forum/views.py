@@ -17,7 +17,7 @@ from .serializers import (
     ForumReplySerializer, LeaderboardSerializer,
 )
 
-ALLOWED_TAGS = bleach.sanitizer.ALLOWED_TAGS + ["p", "br", "pre", "code", "ul", "ol", "li", "h3", "h4"]
+ALLOWED_TAGS = list(bleach.sanitizer.ALLOWED_TAGS) + ["p", "br", "pre", "code", "ul", "ol", "li", "h3", "h4"]
 
 
 class CategoryListView(generics.ListAPIView):
