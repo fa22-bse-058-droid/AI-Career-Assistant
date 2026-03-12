@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "channels",
     "django_celery_beat",
+    "django_filters",
     "csp",
     # Apps
     "apps.authentication",
