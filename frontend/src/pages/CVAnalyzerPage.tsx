@@ -3,7 +3,7 @@ import { useDropzone } from 'react-dropzone'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { Upload, XCircle, RefreshCw, AlertTriangle, CheckCircle, TrendingUp, User, BarChart2 } from 'lucide-react'
-import api from '@/api/axios'
+import { uploadCV, getCVStatus } from '@/api/cvApi'
 
 function ScoreGauge({ score, grade }: { score: number; grade: string }) {
   const gradeColors: Record<string, string> = {
@@ -328,14 +328,7 @@ export default function CVAnalyzerPage() {
   const [uploadedCvId, setUploadedCvId] = useState<string | null>(null)
 
   const uploadMutation = useMutation({
-    mutationFn: async (file: File) => {
-      const formData = new FormData()
-      formData.append('file', file)
-      const res = await api.post('/cv/upload/', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-      return res.data
-    },
+    mutationFn: (file: File) => uploadCV(file),
     onSuccess: (data) => {
       setUploadedCvId(data.id)
     },
@@ -343,7 +336,7 @@ export default function CVAnalyzerPage() {
 
   const { data: cvStatus } = useQuery({
     queryKey: ['cv-status', uploadedCvId],
-    queryFn: () => api.get(`/cv/${uploadedCvId}/status/`).then((r) => r.data),
+    queryFn: () => getCVStatus(uploadedCvId!),
     enabled: !!uploadedCvId,
     refetchInterval: (query) => {
       const d = query.state.data as any
