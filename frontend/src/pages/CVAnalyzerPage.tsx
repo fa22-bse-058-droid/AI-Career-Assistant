@@ -360,12 +360,9 @@ export default function CVAnalyzerPage() {
     maxFiles: 1,
   })
 
-  const analysis = cvStatus?.analysis
-  const isProcessing = cvStatus?.status === 'processing' || cvStatus?.status === 'pending'
-  const deepAnalysis: DeepAnalysis | null =
-    analysis?.deep_analysis && Object.keys(analysis.deep_analysis).length > 0
-      ? (analysis.deep_analysis as DeepAnalysis)
-      : null
+const analysis = cvStatus?.analysis
+const isProcessing = cvStatus?.status === 'processing' || cvStatus?.status === 'pending'
+const deepAnalysis = (analysis as any)?.deep_analysis || null
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
