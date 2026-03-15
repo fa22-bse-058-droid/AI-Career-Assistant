@@ -2,7 +2,7 @@
 Serializers for CV Analyzer.
 """
 from rest_framework import serializers
-from .models import CVUpload, CVAnalysis
+from .models import CVUpload, CVAnalysis, JobCategory
 
 
 class CVAnalysisSerializer(serializers.ModelSerializer):
@@ -28,4 +28,11 @@ class CVUploadSerializer(serializers.ModelSerializer):
             "id", "original_filename", "status", "task_id",
             "uploaded_at", "processed_at", "error_message", "analysis",
         ]
+        read_only_fields = fields
+
+
+class JobCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = JobCategory
+        fields = ["id", "name", "slug", "required_skills", "description"]
         read_only_fields = fields

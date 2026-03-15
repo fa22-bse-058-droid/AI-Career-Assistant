@@ -112,6 +112,25 @@ class TestComputeSkillGaps:
         gaps = compute_skill_gaps(user_skills)
         assert len(gaps) > 1
 
+    def test_match_percentage_included(self):
+        user_skills = ["Python", "Django"]
+        gaps = compute_skill_gaps(user_skills, "Full Stack Developer")
+        assert "Full Stack Developer" in gaps
+        gap = gaps["Full Stack Developer"]
+        assert "match_percentage" in gap
+        assert 0 <= gap["match_percentage"] <= 100
+
+    def test_match_percentage_correct(self):
+        # Backend Developer required: Python, Django, MySQL, REST API, Git (5 total)
+        # User has Python and Django → 2 matched → 40%
+        user_skills = ["Python", "Django"]
+        gaps = compute_skill_gaps(user_skills, "Backend Developer")
+        assert "Backend Developer" in gaps
+        gap = gaps["Backend Developer"]
+        assert gap["matched_required"] == 2
+        assert gap["total_required"] == 5
+        assert gap["match_percentage"] == 40
+
 
 class TestValidateMagicBytes:
     def test_valid_pdf(self):
