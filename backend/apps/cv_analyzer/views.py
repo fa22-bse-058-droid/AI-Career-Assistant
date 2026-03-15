@@ -46,14 +46,15 @@ class CVUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Generate UUID filename
+        # Generate UUID filename while preserving original for display
+        original_filename = file.name
         safe_filename = f"{uuid.uuid4()}.{ext}"
         file.name = safe_filename
 
         cv = CVUpload.objects.create(
             user=request.user,
             file=file,
-            original_filename=file.name,
+            original_filename=original_filename,
         )
 
         # Dispatch Celery task
