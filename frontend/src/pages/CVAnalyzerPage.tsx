@@ -98,24 +98,6 @@ function SkillTag({ skill, category }: { skill: string; category: string }) {
   )
 }
 
-interface DeepAnalysis {
-  ats_score: number
-  keyword_score: number
-  technical_depth_score: number
-  impact_score: number
-  readability_score: number
-  overall_score: number
-  grade: string
-  ats_issues: string[]
-  missing_keywords: string[]
-  skill_gaps: string[]
-  strong_points: string[]
-  improvements: string[]
-  project_feedback: string[]
-  recruiter_verdict: string
-  benchmark: string
-}
-
 function ScoreCard({ label, score, color }: { label: string; score: number; color: string }) {
   return (
     <div className="p-4 rounded-xl bg-white/3 border border-white/5 space-y-2">
@@ -136,13 +118,13 @@ function ScoreCard({ label, score, color }: { label: string; score: number; colo
   )
 }
 
-function DeepAnalysisSection({ deep }: { deep: DeepAnalysis }) {
+function DeepAnalysisSection({ deep }: { deep: any }) {
   const scoreCards = [
-    { label: 'ATS Compatibility', score: deep.ats_score, color: '#3B82F6' },
-    { label: 'Keyword Coverage', score: deep.keyword_score, color: '#8B5CF6' },
-    { label: 'Technical Depth', score: deep.technical_depth_score, color: '#06B6D4' },
-    { label: 'Impact Language', score: deep.impact_score, color: '#10B981' },
-    { label: 'Readability', score: deep.readability_score, color: '#F59E0B' },
+    { label: 'ATS Compatibility', score: deep.ats_score ?? 0, color: '#3B82F6' },
+    { label: 'Keyword Coverage', score: deep.keyword_score ?? 0, color: '#8B5CF6' },
+    { label: 'Technical Depth', score: deep.technical_depth_score ?? 0, color: '#06B6D4' },
+    { label: 'Impact Language', score: deep.impact_score ?? 0, color: '#10B981' },
+    { label: 'Readability', score: deep.readability_score ?? 0, color: '#F59E0B' },
   ]
 
   return (
@@ -161,7 +143,7 @@ function DeepAnalysisSection({ deep }: { deep: DeepAnalysis }) {
         <div className="flex flex-col md:flex-row items-center gap-8">
           <div className="flex flex-col items-center gap-2">
             <p className="text-xs text-slate-400 uppercase tracking-wider">Overall</p>
-            <ScoreGauge score={deep.overall_score} grade={deep.grade} />
+            <ScoreGauge score={deep.overall_score ?? 0} grade={deep.grade ?? 'poor'} />
           </div>
           <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
             {scoreCards.map((card) => (
@@ -172,14 +154,14 @@ function DeepAnalysisSection({ deep }: { deep: DeepAnalysis }) {
       </div>
 
       {/* ATS Issues */}
-      {deep.ats_issues.length > 0 && (
+      {(deep.ats_issues?.length ?? 0) > 0 && (
         <div className="glass-card p-6">
           <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <AlertTriangle size={18} className="text-amber-400" />
             ATS Issues
           </h2>
           <ul className="space-y-2">
-            {deep.ats_issues.map((issue, i) => (
+            {(deep.ats_issues as string[]).map((issue, i) => (
               <motion.li
                 key={i}
                 initial={{ opacity: 0, x: -10 }}
@@ -196,11 +178,11 @@ function DeepAnalysisSection({ deep }: { deep: DeepAnalysis }) {
       )}
 
       {/* Missing Keywords chips */}
-      {deep.missing_keywords.length > 0 && (
+      {(deep.missing_keywords?.length ?? 0) > 0 && (
         <div className="glass-card p-6">
           <h2 className="text-lg font-semibold text-white mb-4">Missing Keywords</h2>
           <div className="flex flex-wrap gap-2">
-            {deep.missing_keywords.map((kw, i) => (
+            {(deep.missing_keywords as string[]).map((kw, i) => (
               <motion.span
                 key={kw}
                 initial={{ opacity: 0, scale: 0.8 }}
@@ -216,11 +198,11 @@ function DeepAnalysisSection({ deep }: { deep: DeepAnalysis }) {
       )}
 
       {/* Skill Gaps list */}
-      {deep.skill_gaps.length > 0 && (
+      {(deep.skill_gaps?.length ?? 0) > 0 && (
         <div className="glass-card p-6">
           <h2 className="text-lg font-semibold text-white mb-4">Skill Gaps</h2>
           <div className="flex flex-wrap gap-2">
-            {deep.skill_gaps.map((gap, i) => (
+            {(deep.skill_gaps as string[]).map((gap, i) => (
               <motion.span
                 key={gap}
                 initial={{ opacity: 0, scale: 0.8 }}
@@ -236,14 +218,14 @@ function DeepAnalysisSection({ deep }: { deep: DeepAnalysis }) {
       )}
 
       {/* Strong Points */}
-      {deep.strong_points.length > 0 && (
+      {(deep.strong_points?.length ?? 0) > 0 && (
         <div className="glass-card p-6">
           <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <CheckCircle size={18} className="text-green-400" />
             Strong Points
           </h2>
           <ul className="space-y-2">
-            {deep.strong_points.map((point, i) => (
+            {(deep.strong_points as string[]).map((point, i) => (
               <motion.li
                 key={i}
                 initial={{ opacity: 0, x: -10 }}
@@ -260,14 +242,14 @@ function DeepAnalysisSection({ deep }: { deep: DeepAnalysis }) {
       )}
 
       {/* Improvement Action Plan */}
-      {deep.improvements.length > 0 && (
+      {(deep.improvements?.length ?? 0) > 0 && (
         <div className="glass-card p-6">
           <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <TrendingUp size={18} className="text-accent-blue" />
             Improvement Action Plan
           </h2>
           <ol className="space-y-3">
-            {deep.improvements.map((item, i) => (
+            {(deep.improvements as string[]).map((item, i) => (
               <motion.li
                 key={i}
                 initial={{ opacity: 0, x: -10 }}
@@ -286,11 +268,11 @@ function DeepAnalysisSection({ deep }: { deep: DeepAnalysis }) {
       )}
 
       {/* Project Feedback */}
-      {deep.project_feedback.length > 0 && (
+      {(deep.project_feedback?.length ?? 0) > 0 && (
         <div className="glass-card p-6">
           <h2 className="text-lg font-semibold text-white mb-4">Project Feedback</h2>
           <ul className="space-y-2">
-            {deep.project_feedback.map((fb, i) => (
+            {(deep.project_feedback as string[]).map((fb, i) => (
               <motion.li
                 key={i}
                 initial={{ opacity: 0, x: -10 }}
@@ -307,21 +289,30 @@ function DeepAnalysisSection({ deep }: { deep: DeepAnalysis }) {
       )}
 
       {/* Recruiter Verdict card */}
-      <div className="glass-card p-6">
-        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <User size={18} className="text-accent-purple" />
-          Recruiter Verdict
-        </h2>
-        <p className="text-sm text-slate-300 leading-relaxed">{deep.recruiter_verdict}</p>
-      </div>
+      {deep.recruiter_verdict && (
+        <div className="glass-card p-6">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <User size={18} className="text-accent-purple" />
+            Recruiter Verdict
+          </h2>
+          <p className="text-sm text-slate-300 leading-relaxed">{deep.recruiter_verdict}</p>
+        </div>
+      )}
 
       {/* Industry Benchmark */}
-      <div className="glass-card p-6 border border-accent-blue/20">
-        <h2 className="text-lg font-semibold text-white mb-3">Industry Benchmark</h2>
-        <p className="text-sm text-slate-300 leading-relaxed">{deep.benchmark}</p>
-      </div>
+      {deep.benchmark && (
+        <div className="glass-card p-6 border border-accent-blue/20">
+          <h2 className="text-lg font-semibold text-white mb-3">Industry Benchmark</h2>
+          <p className="text-sm text-slate-300 leading-relaxed">{deep.benchmark}</p>
+        </div>
+      )}
     </motion.div>
   )
+}
+
+/** Returns true only when the backend has produced a complete deep-analysis result. */
+function isValidDeepAnalysis(value: Record<string, unknown> | null | undefined): boolean {
+  return !!value && typeof value === 'object' && 'overall_score' in value
 }
 
 export default function CVAnalyzerPage() {
@@ -360,9 +351,9 @@ export default function CVAnalyzerPage() {
     maxFiles: 1,
   })
 
-const analysis = cvStatus?.analysis
-const isProcessing = cvStatus?.status === 'processing' || cvStatus?.status === 'pending'
-const deepAnalysis = (analysis as any)?.deep_analysis || null
+  const analysis = cvStatus?.analysis
+  const isProcessing = cvStatus?.status === 'processing' || cvStatus?.status === 'pending'
+  const deepAnalysis = isValidDeepAnalysis(analysis?.deep_analysis) ? analysis!.deep_analysis : null
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -415,7 +406,9 @@ const deepAnalysis = (analysis as any)?.deep_analysis || null
       {uploadMutation.isError && (
         <div className="flex items-center gap-3 p-4 rounded-lg bg-red-500/10 border border-red-500/20">
           <XCircle size={18} className="text-red-400" />
-          <p className="text-red-400 text-sm">Upload failed. Please try again.</p>
+          <p className="text-red-400 text-sm">
+            {(uploadMutation.error as any)?.response?.data?.detail ?? 'Upload failed. Please try again.'}
+          </p>
           <button
             onClick={() => { setUploadedCvId(null); uploadMutation.reset() }}
             className="ml-auto text-slate-400 hover:text-white"
@@ -427,7 +420,7 @@ const deepAnalysis = (analysis as any)?.deep_analysis || null
 
       {/* Processing Animation */}
       <AnimatePresence>
-        {isProcessing && (
+        {(isProcessing || uploadMutation.isPending) && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -440,12 +433,28 @@ const deepAnalysis = (analysis as any)?.deep_analysis || null
               animate={{ opacity: [0.5, 1, 0.5] }}
               transition={{ duration: 1.5, repeat: Infinity }}
             >
-              Analyzing your CV with AI...
+              {uploadMutation.isPending ? 'Uploading your CV...' : 'Analyzing your CV with AI...'}
             </motion.p>
             <p className="text-slate-400 text-sm mt-2">Extracting skills, scoring, detecting gaps</p>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* CV Analysis Failed */}
+      {cvStatus?.status === 'failed' && (
+        <div className="flex items-center gap-3 p-4 rounded-lg bg-red-500/10 border border-red-500/20">
+          <XCircle size={18} className="text-red-400" />
+          <p className="text-red-400 text-sm">
+            {cvStatus.error_message || 'CV analysis failed. Please try uploading again.'}
+          </p>
+          <button
+            onClick={() => { setUploadedCvId(null); uploadMutation.reset() }}
+            className="ml-auto text-slate-400 hover:text-white"
+          >
+            <RefreshCw size={16} />
+          </button>
+        </div>
+      )}
 
       {/* Results */}
       <AnimatePresence>

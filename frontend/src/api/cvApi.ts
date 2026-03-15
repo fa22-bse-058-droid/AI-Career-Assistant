@@ -34,6 +34,7 @@ export interface CVAnalysis {
   education: unknown[]
   experience: unknown[]
   contact_info: Record<string, string>
+  deep_analysis: Record<string, unknown>
   created_at: string
   updated_at: string
 }
