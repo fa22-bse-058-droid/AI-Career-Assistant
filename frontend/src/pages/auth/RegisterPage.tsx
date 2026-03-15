@@ -100,16 +100,18 @@ export default function RegisterPage() {
       navigate('/dashboard')
     } catch (err: unknown) {
       const axiosErr = err as {
-        response?: { status?: number; data?: unknown }
+        response?: { status?: number; data?: unknown; headers?: Record<string, string> }
       }
       console.error('Register error:', axiosErr?.response?.status, axiosErr?.response?.data, err)
       const errData = axiosErr.response?.data
-      let firstMsg = 'Registration failed'
+      const contentType = axiosErr.response?.headers?.['content-type'] ?? ''
+      const isHtmlResponse = contentType.includes('text/html')
+      let firstMsg = 'Registration failed. Please try again.'
       if (errData && typeof errData === 'object') {
         const values = Object.values(errData as Record<string, unknown>).flat()
         const first = values[0]
         if (typeof first === 'string') firstMsg = first
-      } else if (typeof errData === 'string') {
+      } else if (typeof errData === 'string' && !isHtmlResponse) {
         firstMsg = errData
       }
       setError('root', { message: firstMsg })
