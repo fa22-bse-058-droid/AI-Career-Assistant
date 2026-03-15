@@ -2,10 +2,14 @@
 Celery tasks for CV Analyzer.
 """
 import logging
+import requests
 from celery import shared_task
+from django.conf import settings
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
+
+FASTAPI_BASE_URL = getattr(settings, "AI_SERVICE_URL", "http://fastapi:8001")
 
 
 @shared_task(
@@ -21,7 +25,8 @@ def analyze_cv_task(self, cv_upload_id: str):
     2. Extract skills using PhraseMatcher
     3. Score the CV
     4. Detect skill gaps
-    5. Save CVAnalysis
+    5. Call FastAPI deep analysis endpoint
+    6. Save CVAnalysis
     """
     from .models import CVUpload, CVAnalysis
     from .analyzer import (
@@ -74,6 +79,32 @@ def analyze_cv_task(self, cv_upload_id: str):
         gaps = compute_skill_gaps(skills_data["all"], target_role)
         grade = CVAnalysis.compute_grade(scores["overall"])
 
+        # Deep analysis via FastAPI service
+        deep_analysis: dict = {}
+        cv_text_for_analysis = text[:8000]
+        if len(text) > 8000:
+            logger.info(
+                "CV text truncated from %d to 8000 chars for deep analysis (cv_id=%s)",
+                len(text),
+                cv_upload_id,
+            )
+        try:
+            resp = requests.post(
+                f"{FASTAPI_BASE_URL}/analyze-cv-deep",
+                json={"cv_text": cv_text_for_analysis},
+                timeout=30,
+            )
+            if resp.ok:
+                deep_analysis = resp.json()
+            else:
+                logger.warning(
+                    "Deep CV analysis returned non-OK status %s: %s",
+                    resp.status_code,
+                    resp.text,
+                )
+        except Exception as exc:
+            logger.warning("Deep CV analysis call failed (non-fatal): %s", exc)
+
         # Save or update analysis
         CVAnalysis.objects.update_or_create(
             cv=cv,
@@ -88,6 +119,7 @@ def analyze_cv_task(self, cv_upload_id: str):
                 "skills_by_category": skills_data["by_category"],
                 "skill_gaps": gaps,
                 "raw_text": text[:5000],  # Store first 5000 chars only
+                "deep_analysis": deep_analysis,
             },
         )
 
