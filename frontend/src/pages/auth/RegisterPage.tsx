@@ -83,12 +83,13 @@ export default function RegisterPage() {
     setIsLoading(true)
     try {
       const { terms: _terms, ...payload } = data
-      const response = await api.post('/auth/register/', payload)
+      const response = await api.post('/api/auth/register/', payload)
       const { user, access } = response.data
       setAuth(user, access)
       navigate('/dashboard')
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: Record<string, string | string[]> } }
+      const axiosErr = err as { response?: { status?: number; data?: Record<string, string | string[]> } }
+      console.error('Register error:', axiosErr?.response?.status, axiosErr?.response?.data, err)
       const data = axiosErr.response?.data
       const firstMsg = data
         ? Object.values(data).flat()[0] ?? 'Registration failed'
