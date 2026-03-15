@@ -83,7 +83,7 @@ export default function RegisterPage() {
     setIsLoading(true)
     try {
       const { terms: _terms, ...payload } = data
-      const response = await api.post('/api/auth/register/', payload)
+      const response = await api.post('/auth/register/', payload)
       const { user, access } = response.data
       setAuth(user, access)
       navigate('/dashboard')
