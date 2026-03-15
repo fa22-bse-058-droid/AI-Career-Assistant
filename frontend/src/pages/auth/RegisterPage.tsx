@@ -23,7 +23,14 @@ const registerSchema = z
     password_confirm: z.string(),
     role: z.enum(['student', 'employer']),
     university: z.string().optional(),
-    graduation_year: z.number().optional(),
+    graduation_year: z.preprocess(
+      (val) => {
+        if (val === '' || val === undefined || val === null) return undefined
+        const n = Number(val)
+        return isNaN(n) ? undefined : n
+      },
+      z.number().int().optional()
+    ),
     terms: z.literal(true, { errorMap: () => ({ message: 'You must accept the terms' }) }),
   })
   .refine((d) => d.password === d.password_confirm, {
