@@ -4,6 +4,7 @@ CV Analyzer models.
 import uuid
 from django.db import models
 from django.conf import settings
+from django.utils.text import slugify
 
 
 class CVUpload(models.Model):
@@ -71,3 +72,24 @@ class CVAnalysis(models.Model):
         elif score <= 80:
             return CVAnalysis.Grade.GOOD
         return CVAnalysis.Grade.EXCELLENT
+
+
+class JobCategory(models.Model):
+    """Job category with required skills for skill-gap detection."""
+
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(unique=True, max_length=120)
+    required_skills = models.JSONField(default=list)
+    description = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name_plural = "Job Categories"
+        ordering = ["name"]
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name

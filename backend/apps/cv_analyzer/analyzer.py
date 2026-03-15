@@ -264,16 +264,25 @@ def compute_skill_gaps(user_skills: list, target_role: str = None) -> dict:
     )
 
     for role, profile in roles_to_check.items():
+        required = profile["required"]
+        preferred = profile.get("preferred", [])
         missing_required = [
-            s for s in profile["required"] if s.lower() not in user_skills_lower
+            s for s in required if s.lower() not in user_skills_lower
         ]
         missing_preferred = [
-            s for s in profile.get("preferred", []) if s.lower() not in user_skills_lower
+            s for s in preferred if s.lower() not in user_skills_lower
         ]
         if missing_required or missing_preferred:
+            matched_required = len(required) - len(missing_required)
+            total_required = len(required)
             gaps[role] = {
                 "missing_required": missing_required,
                 "missing_preferred": missing_preferred,
+                "matched_required": matched_required,
+                "total_required": total_required,
+                "match_percentage": round(
+                    (matched_required / total_required * 100) if total_required else 0
+                ),
             }
 
     return gaps
