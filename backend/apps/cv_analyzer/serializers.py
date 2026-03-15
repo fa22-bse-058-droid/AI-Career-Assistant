@@ -14,6 +14,7 @@ class CVAnalysisSerializer(serializers.ModelSerializer):
             "skill_density_score", "formatting_score",
             "extracted_skills", "skills_by_category", "skill_gaps",
             "education", "experience", "contact_info",
+            "deep_analysis",
             "created_at", "updated_at",
         ]
         read_only_fields = fields

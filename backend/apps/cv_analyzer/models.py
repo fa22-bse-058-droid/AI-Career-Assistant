@@ -57,6 +57,7 @@ class CVAnalysis(models.Model):
     experience = models.JSONField(default=list)
     contact_info = models.JSONField(default=dict)
     raw_text = models.TextField(blank=True)
+    deep_analysis = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

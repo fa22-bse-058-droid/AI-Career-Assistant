@@ -2,17 +2,17 @@ import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { Upload, XCircle, RefreshCw } from 'lucide-react'
+import { Upload, XCircle, RefreshCw, AlertTriangle, CheckCircle, TrendingUp, User, BarChart2 } from 'lucide-react'
 import api from '@/api/axios'
 
 function ScoreGauge({ score, grade }: { score: number; grade: string }) {
   const gradeColors: Record<string, string> = {
-    poor: '#EF4444',
-    average: '#F59E0B',
-    good: '#3B82F6',
-    excellent: '#10B981',
+    Poor: '#EF4444',
+    Average: '#F59E0B',
+    Good: '#3B82F6',
+    Excellent: '#10B981',
   }
-  const color = gradeColors[grade] || '#3B82F6'
+  const color = gradeColors[grade] ?? gradeColors[grade.charAt(0).toUpperCase() + grade.slice(1).toLowerCase()] ?? '#3B82F6'
   const circumference = 2 * Math.PI * 45
   const dashOffset = circumference - (score / 100) * circumference
 
@@ -53,9 +53,7 @@ function ScoreGauge({ score, grade }: { score: number; grade: string }) {
 function LaserScanAnimation() {
   return (
     <div className="relative w-48 h-64 mx-auto my-8">
-      {/* Document outline */}
       <div className="absolute inset-0 border-2 border-accent-blue/30 rounded-lg bg-white/2">
-        {/* Page lines */}
         {[20, 35, 50, 65, 80, 95, 110, 125, 140, 155].map((y) => (
           <div
             key={y}
@@ -64,14 +62,12 @@ function LaserScanAnimation() {
           />
         ))}
       </div>
-      {/* Laser beam */}
       <motion.div
         className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-accent-blue to-transparent"
         style={{ boxShadow: '0 0 8px rgba(59, 130, 246, 0.8)' }}
         animate={{ top: ['5%', '95%', '5%'] }}
         transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
       />
-      {/* Corner brackets */}
       <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-accent-blue" />
       <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-accent-blue" />
       <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-accent-blue" />
@@ -99,6 +95,232 @@ function SkillTag({ skill, category }: { skill: string; category: string }) {
     >
       {skill}
     </motion.span>
+  )
+}
+
+interface DeepAnalysis {
+  ats_score: number
+  keyword_score: number
+  technical_depth_score: number
+  impact_score: number
+  readability_score: number
+  overall_score: number
+  grade: string
+  ats_issues: string[]
+  missing_keywords: string[]
+  skill_gaps: string[]
+  strong_points: string[]
+  improvements: string[]
+  project_feedback: string[]
+  recruiter_verdict: string
+  benchmark: string
+}
+
+function ScoreCard({ label, score, color }: { label: string; score: number; color: string }) {
+  return (
+    <div className="p-4 rounded-xl bg-white/3 border border-white/5 space-y-2">
+      <div className="flex justify-between items-center">
+        <span className="text-xs text-slate-400">{label}</span>
+        <span className="text-sm font-semibold text-white">{score.toFixed(0)}</span>
+      </div>
+      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+        <motion.div
+          className="h-full rounded-full"
+          style={{ background: color }}
+          initial={{ width: 0 }}
+          animate={{ width: `${score}%` }}
+          transition={{ duration: 1.2, ease: 'easeOut' }}
+        />
+      </div>
+    </div>
+  )
+}
+
+function DeepAnalysisSection({ deep }: { deep: DeepAnalysis }) {
+  const scoreCards = [
+    { label: 'ATS Compatibility', score: deep.ats_score, color: '#3B82F6' },
+    { label: 'Keyword Coverage', score: deep.keyword_score, color: '#8B5CF6' },
+    { label: 'Technical Depth', score: deep.technical_depth_score, color: '#06B6D4' },
+    { label: 'Impact Language', score: deep.impact_score, color: '#10B981' },
+    { label: 'Readability', score: deep.readability_score, color: '#F59E0B' },
+  ]
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.2 }}
+      className="space-y-6"
+    >
+      {/* ATS Score Gauge + 5 score cards */}
+      <div className="glass-card p-6">
+        <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+          <BarChart2 size={18} className="text-accent-blue" />
+          Deep ATS Analysis
+        </h2>
+        <div className="flex flex-col md:flex-row items-center gap-8">
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-xs text-slate-400 uppercase tracking-wider">Overall</p>
+            <ScoreGauge score={deep.overall_score} grade={deep.grade} />
+          </div>
+          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {scoreCards.map((card) => (
+              <ScoreCard key={card.label} {...card} />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ATS Issues */}
+      {deep.ats_issues.length > 0 && (
+        <div className="glass-card p-6">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <AlertTriangle size={18} className="text-amber-400" />
+            ATS Issues
+          </h2>
+          <ul className="space-y-2">
+            {deep.ats_issues.map((issue, i) => (
+              <motion.li
+                key={i}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className="flex items-start gap-2 text-sm text-slate-300"
+              >
+                <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
+                {issue}
+              </motion.li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Missing Keywords chips */}
+      {deep.missing_keywords.length > 0 && (
+        <div className="glass-card p-6">
+          <h2 className="text-lg font-semibold text-white mb-4">Missing Keywords</h2>
+          <div className="flex flex-wrap gap-2">
+            {deep.missing_keywords.map((kw, i) => (
+              <motion.span
+                key={kw}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.04 }}
+                className="px-2.5 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-300 border border-red-500/20"
+              >
+                {kw}
+              </motion.span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Skill Gaps list */}
+      {deep.skill_gaps.length > 0 && (
+        <div className="glass-card p-6">
+          <h2 className="text-lg font-semibold text-white mb-4">Skill Gaps</h2>
+          <div className="flex flex-wrap gap-2">
+            {deep.skill_gaps.map((gap, i) => (
+              <motion.span
+                key={gap}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.04 }}
+                className="px-2.5 py-1 rounded-full text-xs font-medium bg-orange-500/10 text-orange-300 border border-orange-500/20"
+              >
+                {gap}
+              </motion.span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Strong Points */}
+      {deep.strong_points.length > 0 && (
+        <div className="glass-card p-6">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <CheckCircle size={18} className="text-green-400" />
+            Strong Points
+          </h2>
+          <ul className="space-y-2">
+            {deep.strong_points.map((point, i) => (
+              <motion.li
+                key={i}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className="flex items-start gap-2 text-sm text-slate-300"
+              >
+                <span className="mt-1 w-1.5 h-1.5 rounded-full bg-green-400 flex-shrink-0" />
+                {point}
+              </motion.li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Improvement Action Plan */}
+      {deep.improvements.length > 0 && (
+        <div className="glass-card p-6">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <TrendingUp size={18} className="text-accent-blue" />
+            Improvement Action Plan
+          </h2>
+          <ol className="space-y-3">
+            {deep.improvements.map((item, i) => (
+              <motion.li
+                key={i}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.06 }}
+                className="flex items-start gap-3 text-sm text-slate-300"
+              >
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-accent-blue/20 border border-accent-blue/30 text-accent-blue text-xs font-bold flex items-center justify-center">
+                  {i + 1}
+                </span>
+                {item}
+              </motion.li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {/* Project Feedback */}
+      {deep.project_feedback.length > 0 && (
+        <div className="glass-card p-6">
+          <h2 className="text-lg font-semibold text-white mb-4">Project Feedback</h2>
+          <ul className="space-y-2">
+            {deep.project_feedback.map((fb, i) => (
+              <motion.li
+                key={i}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className="flex items-start gap-2 text-sm text-slate-300"
+              >
+                <span className="mt-1 w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0" />
+                {fb}
+              </motion.li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Recruiter Verdict card */}
+      <div className="glass-card p-6">
+        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <User size={18} className="text-accent-purple" />
+          Recruiter Verdict
+        </h2>
+        <p className="text-sm text-slate-300 leading-relaxed">{deep.recruiter_verdict}</p>
+      </div>
+
+      {/* Industry Benchmark */}
+      <div className="glass-card p-6 border border-accent-blue/20">
+        <h2 className="text-lg font-semibold text-white mb-3">Industry Benchmark</h2>
+        <p className="text-sm text-slate-300 leading-relaxed">{deep.benchmark}</p>
+      </div>
+    </motion.div>
   )
 }
 
@@ -147,6 +369,10 @@ export default function CVAnalyzerPage() {
 
   const analysis = cvStatus?.analysis
   const isProcessing = cvStatus?.status === 'processing' || cvStatus?.status === 'pending'
+  const deepAnalysis: DeepAnalysis | null =
+    analysis?.deep_analysis && Object.keys(analysis.deep_analysis).length > 0
+      ? (analysis.deep_analysis as DeepAnalysis)
+      : null
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -292,7 +518,7 @@ export default function CVAnalyzerPage() {
               </div>
             )}
 
-            {/* Skill Gaps */}
+            {/* Skill Gaps (existing rule-based) */}
             {Object.keys(analysis.skill_gaps).length > 0 && (
               <div className="glass-card p-6">
                 <h2 className="text-lg font-semibold text-white mb-4">Skill Gap Analysis</h2>
@@ -329,6 +555,9 @@ export default function CVAnalyzerPage() {
                 </div>
               </div>
             )}
+
+            {/* Deep ATS Analysis Section */}
+            {deepAnalysis && <DeepAnalysisSection deep={deepAnalysis} />}
 
             {/* Upload another */}
             <button
