@@ -89,19 +89,30 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterForm) => {
     setIsLoading(true)
     try {
-      const { terms: _terms, ...payload } = data
+      const { terms: _terms, graduation_year, ...rest } = data
+      const payload = {
+        ...rest,
+        graduation_year: graduation_year ?? null,
+      }
       const response = await api.post('/auth/register/', payload)
       const { user, access } = response.data
       setAuth(user, access)
       navigate('/dashboard')
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { status?: number; data?: Record<string, string | string[]> } }
+      const axiosErr = err as {
+        response?: { status?: number; data?: unknown }
+      }
       console.error('Register error:', axiosErr?.response?.status, axiosErr?.response?.data, err)
-      const data = axiosErr.response?.data
-      const firstMsg = data
-        ? Object.values(data).flat()[0] ?? 'Registration failed'
-        : 'Registration failed'
-      setError('root', { message: String(firstMsg) })
+      const errData = axiosErr.response?.data
+      let firstMsg = 'Registration failed'
+      if (errData && typeof errData === 'object') {
+        const values = Object.values(errData as Record<string, unknown>).flat()
+        const first = values[0]
+        if (typeof first === 'string') firstMsg = first
+      } else if (typeof errData === 'string') {
+        firstMsg = errData
+      }
+      setError('root', { message: firstMsg })
     } finally {
       setIsLoading(false)
     }
@@ -353,7 +364,7 @@ export default function RegisterPage() {
                           style={{ color: 'rgba(232,234,240,0.4)' }}
                         />
                         <select
-                          {...register('graduation_year', { valueAsNumber: true })}
+                          {...register('graduation_year')}
                           className="flex-1 bg-transparent text-sm outline-none"
                           style={{ color: 'rgba(232,234,240,0.8)' }}
                           defaultValue=""
