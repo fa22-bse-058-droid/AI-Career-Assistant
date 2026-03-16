@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 FROM base AS builder
 
 COPY requirements.txt .
-RUN pip install --user --no-warn-script-location -r requirements.txt
+RUN pip install --user --no-warn-script-location --timeout=300 -r requirements.txt
 
 # Final stage
 FROM base AS final
