@@ -115,16 +115,24 @@ JOB_ROLE_PROFILES = {
 def extract_text_from_pdf(file_bytes: bytes) -> str:
     """Extract text from PDF file bytes."""
     try:
-        import pdfminer.high_level as pdfminer
-        return pdfminer.extract_text(io.BytesIO(file_bytes))
+        import pdfminer.high_level as pdfminer_hl
+        text = pdfminer_hl.extract_text(io.BytesIO(file_bytes))
+        return text or ""
     except ImportError:
-        try:
-            import PyPDF2
-            reader = PyPDF2.PdfReader(io.BytesIO(file_bytes))
-            return "\n".join(page.extract_text() or "" for page in reader.pages)
-        except Exception as e:
-            logger.error("PDF extraction failed: %s", e)
-            return ""
+        # pdfminer.six not installed; fall through to PyPDF2 fallback below
+        pass
+    except Exception as e:
+        logger.error("pdfminer PDF extraction failed: %s", e)
+        raise Exception(f"PDF extraction failed: {e}") from e
+
+    try:
+        import PyPDF2
+        reader = PyPDF2.PdfReader(io.BytesIO(file_bytes))
+        text = "\n".join(page.extract_text() or "" for page in reader.pages)
+        return text
+    except Exception as e:
+        logger.error("PyPDF2 extraction failed: %s", e)
+        raise Exception(f"PDF extraction failed: {e}") from e
 
 
 def extract_text_from_docx(file_bytes: bytes) -> str:
@@ -135,7 +143,7 @@ def extract_text_from_docx(file_bytes: bytes) -> str:
         return "\n".join(para.text for para in doc.paragraphs)
     except Exception as e:
         logger.error("DOCX extraction failed: %s", e)
-        return ""
+        raise Exception(f"DOCX extraction failed: {e}") from e
 
 
 def validate_magic_bytes(file_bytes: bytes, filename: str) -> bool:
