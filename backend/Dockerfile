@@ -31,6 +31,8 @@ COPY . .
 
 RUN python -m spacy download en_core_web_sm
 
+RUN mkdir -p /app/media
+
 EXPOSE 8000
 
 CMD ["sh", "-c", "python manage.py migrate --fake-initial 2>/dev/null; python manage.py migrate --run-syncdb 2>/dev/null; gunicorn career_platform.asgi:application --worker-class uvicorn.workers.UvicornWorker --workers 2 --bind 0.0.0.0:8000 --timeout 120"]

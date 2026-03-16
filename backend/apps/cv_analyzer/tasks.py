@@ -62,7 +62,10 @@ def analyze_cv_task(self, cv_upload_id: str):
             raise ValueError(f"Unsupported file type: {ext}")
 
         if not text.strip():
-            raise ValueError("Could not extract text from CV")
+            raise ValueError(
+                f"Could not extract text from CV ({filename}). "
+                "The file may be image-based (scanned) or contain no selectable text."
+            )
 
         # Analyze
         skills_data = extract_skills_from_text(text)
