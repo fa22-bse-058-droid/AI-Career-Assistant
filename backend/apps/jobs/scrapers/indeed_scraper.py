@@ -46,10 +46,9 @@ class IndeedScraper(BaseScraper):
                             "Indeed returned 403 — stopping this source as partial"
                         )
                         if self.scraper_run:
-                            from apps.jobs.models import ScraperRun
                             type(self.scraper_run).objects.filter(
                                 pk=self.scraper_run.pk
-                            ).update(status=ScraperRun.StatusChoice.PARTIAL)
+                            ).update(status="partial")
                         return total_found
                     self.log_error(
                         f"Failed to fetch indeed page {page} for query '{query}'"

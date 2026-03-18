@@ -56,7 +56,8 @@ class JobListing(models.Model):
     skills_required = models.JSONField(default=list)
     raw_html = models.TextField(blank=True)
 
-    # Remote-first sources
+    # Remote-first sources — single source of truth used by the scraper package.
+    # Mirrors REMOTE_SOURCES in jobs/scrapers/base_scraper.py.
     REMOTE_SOURCES = {
         Source.REMOTIVE,
         Source.WEWORKREMOTELY,

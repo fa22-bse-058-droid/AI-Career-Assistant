@@ -31,10 +31,10 @@ class ApplicationLog(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="applications",
+        related_name="auto_applications",
     )
     job = models.ForeignKey(
-        "jobs.JobListing", on_delete=models.CASCADE, related_name="applications"
+        "jobs.JobListing", on_delete=models.CASCADE, related_name="auto_applications"
     )
     applied_at = models.DateTimeField(auto_now_add=True)
     method = models.CharField(max_length=50, default="auto")
