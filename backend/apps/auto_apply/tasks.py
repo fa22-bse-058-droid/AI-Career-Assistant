@@ -33,7 +33,7 @@ def run_auto_apply_for_all_users(self):
 def run_auto_apply_for_user(self, user_id: str):
     from .models import AutoApplySettings, ApplicationLog
     from apps.authentication.models import CustomUser
-    from apps.jobs.models import JobListing, JobMatch
+    from apps.jobs.models import JobListing, UserJobMatch
 
     try:
         user = CustomUser.objects.get(pk=user_id)
@@ -42,9 +42,9 @@ def run_auto_apply_for_user(self, user_id: str):
         return
 
     # Get matches above threshold
-    matches = JobMatch.objects.filter(
+    matches = UserJobMatch.objects.filter(
         user=user,
-        match_score__gte=settings_obj.min_match_score,
+        score__gte=settings_obj.min_match_score,
     ).select_related("job")
 
     # Check daily quota

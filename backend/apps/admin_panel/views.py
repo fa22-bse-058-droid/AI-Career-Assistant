@@ -21,25 +21,25 @@ from .serializers import AuditLogSerializer, AdminUserSerializer, AdminStatsSeri
 
 
 def _get_scraper_health() -> dict:
-    """Get latest scraper log per source — MySQL compatible."""
-    from apps.jobs.models import ScraperLog
+    """Get latest scraper run per source — MySQL compatible."""
+    from apps.jobs.models import ScraperRun
     from django.db.models import Max
 
     # Get latest started_at per source
     latest_per_source = (
-        ScraperLog.objects.values("source")
+        ScraperRun.objects.values("source")
         .annotate(latest=Max("started_at"))
     )
     health = {}
     for row in latest_per_source:
-        log = ScraperLog.objects.filter(
+        run = ScraperRun.objects.filter(
             source=row["source"], started_at=row["latest"]
         ).first()
-        if log:
-            health[log.source] = {
-                "last_run": str(log.started_at),
-                "status": log.status,
-                "jobs_added": log.jobs_added,
+        if run:
+            health[run.source] = {
+                "last_run": str(run.started_at),
+                "status": run.status,
+                "jobs_added": run.jobs_added,
             }
     return health
 
@@ -106,7 +106,7 @@ class AdminStatsView(APIView):
             return Response(data)
 
         from apps.cv_analyzer.models import CVUpload
-        from apps.jobs.models import JobListing, ScraperLog
+        from apps.jobs.models import JobListing, ScraperRun
         from apps.auto_apply.models import ApplicationLog
 
         now = timezone.now()

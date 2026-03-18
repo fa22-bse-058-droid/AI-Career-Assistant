@@ -27,27 +27,21 @@ def _get_sentence_model():
     autoretry_for=(Exception,),
     retry_backoff=True,
     retry_kwargs={"max_retries": 3},
-    name="jobs.scrape_rozee",
+    name="apps.jobs.tasks.scrape_rozee",
 )
-def scrape_rozee(self):
-    from .scraper import RozeeScraper, save_jobs
-    from .models import ScraperLog
-    log = ScraperLog.objects.create(source="rozee", status="running")
+def scrape_rozee(self, triggered_by="scheduled"):
+    from .scrapers import RozeeScraper
+    scraper = RozeeScraper()
     try:
-        scraper = RozeeScraper()
-        jobs = scraper.scrape()
-        found, added = save_jobs(jobs)
-        log.status = "success"
-        log.jobs_found = found
-        log.jobs_added = added
-        log.finished_at = timezone.now()
-        log.save()
-        logger.info("Rozee scrape done: %d found, %d added", found, added)
+        run = scraper.run(triggered_by=triggered_by)
+        logger.info(
+            "Rozee scrape done: found=%d added=%d",
+            run.jobs_found,
+            run.jobs_added,
+        )
+        return {"source": "rozee", "jobs_added": run.jobs_added}
     except Exception as exc:
-        log.status = "failed"
-        log.error_message = str(exc)
-        log.finished_at = timezone.now()
-        log.save()
+        logger.error("Rozee scrape task failed: %s", exc)
         raise self.retry(exc=exc)
 
 
@@ -56,27 +50,21 @@ def scrape_rozee(self):
     autoretry_for=(Exception,),
     retry_backoff=True,
     retry_kwargs={"max_retries": 3},
-    name="jobs.scrape_indeed",
+    name="apps.jobs.tasks.scrape_indeed",
 )
-def scrape_indeed(self):
-    from .scraper import IndeedScraper, save_jobs
-    from .models import ScraperLog
-    log = ScraperLog.objects.create(source="indeed", status="running")
+def scrape_indeed(self, triggered_by="scheduled"):
+    from .scrapers import IndeedScraper
+    scraper = IndeedScraper()
     try:
-        scraper = IndeedScraper()
-        jobs = scraper.scrape()
-        found, added = save_jobs(jobs)
-        log.status = "success"
-        log.jobs_found = found
-        log.jobs_added = added
-        log.finished_at = timezone.now()
-        log.save()
-        logger.info("Indeed scrape done: %d found, %d added", found, added)
+        run = scraper.run(triggered_by=triggered_by)
+        logger.info(
+            "Indeed scrape done: found=%d added=%d",
+            run.jobs_found,
+            run.jobs_added,
+        )
+        return {"source": "indeed", "jobs_added": run.jobs_added}
     except Exception as exc:
-        log.status = "failed"
-        log.error_message = str(exc)
-        log.finished_at = timezone.now()
-        log.save()
+        logger.error("Indeed scrape task failed: %s", exc)
         raise self.retry(exc=exc)
 
 
@@ -85,38 +73,32 @@ def scrape_indeed(self):
     autoretry_for=(Exception,),
     retry_backoff=True,
     retry_kwargs={"max_retries": 3},
-    name="jobs.scrape_linkedin",
+    name="apps.jobs.tasks.scrape_linkedin",
 )
-def scrape_linkedin(self):
-    from .scraper import LinkedInScraper, save_jobs
-    from .models import ScraperLog
-    log = ScraperLog.objects.create(source="linkedin", status="running")
+def scrape_linkedin(self, triggered_by="scheduled"):
+    from .scrapers import LinkedInScraper
+    scraper = LinkedInScraper()
     try:
-        scraper = LinkedInScraper()
-        jobs = scraper.scrape()
-        found, added = save_jobs(jobs)
-        log.status = "success"
-        log.jobs_found = found
-        log.jobs_added = added
-        log.finished_at = timezone.now()
-        log.save()
-        logger.info("LinkedIn scrape done: %d found, %d added", found, added)
+        run = scraper.run(triggered_by=triggered_by)
+        logger.info(
+            "LinkedIn scrape done: found=%d added=%d",
+            run.jobs_found,
+            run.jobs_added,
+        )
+        return {"source": "linkedin", "jobs_added": run.jobs_added}
     except Exception as exc:
-        log.status = "failed"
-        log.error_message = str(exc)
-        log.finished_at = timezone.now()
-        log.save()
+        logger.error("LinkedIn scrape task failed: %s", exc)
         raise self.retry(exc=exc)
 
 
-@shared_task(name="jobs.scrape_all_sources")
-def scrape_all_sources():
-    scrape_rozee.delay()
-    scrape_indeed.delay()
-    scrape_linkedin.delay()
+@shared_task(name="apps.jobs.tasks.scrape_all_sources")
+def scrape_all_sources(triggered_by="scheduled"):
+    scrape_rozee.delay(triggered_by=triggered_by)
+    scrape_indeed.delay(triggered_by=triggered_by)
+    scrape_linkedin.delay(triggered_by=triggered_by)
 
 
-@shared_task(name="jobs.purge_expired_jobs")
+@shared_task(name="apps.jobs.tasks.purge_expired_jobs")
 def purge_expired_jobs():
     from .models import JobListing
     cutoff = timezone.now()
@@ -125,12 +107,12 @@ def purge_expired_jobs():
     return deleted
 
 
-@shared_task(name="jobs.compute_job_matches_for_user")
+@shared_task(name="apps.jobs.tasks.compute_job_matches_for_user")
 def compute_job_matches_for_user(user_id: str):
-    """Compute MiniLM-based job matches for a user against active listings."""
-    from .models import JobListing, JobMatch
+    """Compute skill-based job matches for a user against active listings."""
+    from .models import JobListing, UserJobMatch
     from apps.authentication.models import CustomUser
-    from apps.cv_analyzer.models import CVAnalysis, CVUpload
+    from apps.cv_analyzer.models import CVUpload
     from django.conf import settings
 
     try:
@@ -144,9 +126,11 @@ def compute_job_matches_for_user(user_id: str):
             return
 
         analysis = latest_cv.analysis
-        user_skills = " ".join(analysis.extracted_skills)
-        if not user_skills:
+        user_skills_raw = getattr(analysis, "extracted_skills", None) or []
+        if not user_skills_raw:
             return
+
+        user_skills_lower = {s.lower() for s in user_skills_raw}
 
         jobs = JobListing.objects.filter(is_active=True).values(
             "id", "title", "description", "skills_required"
@@ -159,13 +143,12 @@ def compute_job_matches_for_user(user_id: str):
             return
         from sentence_transformers import util
 
-        user_embedding = model.encode(user_skills, convert_to_tensor=True)
+        user_text = " ".join(user_skills_raw)
+        user_embedding = model.encode(user_text, convert_to_tensor=True)
 
         semantic_weight = settings.JOB_MATCH_SEMANTIC_WEIGHT
         keyword_weight = settings.JOB_MATCH_KEYWORD_WEIGHT
         threshold = settings.JOB_MATCH_THRESHOLD
-
-        user_skills_lower = {s.lower() for s in analysis.extracted_skills}
 
         for job_data in jobs:
             job_text = f"{job_data['title']} {job_data['description']}"
@@ -174,20 +157,22 @@ def compute_job_matches_for_user(user_id: str):
 
             job_skills = [s.lower() for s in (job_data["skills_required"] or [])]
             if job_skills:
-                keyword_score = len(user_skills_lower & set(job_skills)) / len(job_skills)
+                overlap = list(user_skills_lower & set(job_skills))
+                keyword_score = len(overlap) / len(job_skills)
             else:
+                overlap = []
                 keyword_score = 0.5
 
-            match_score = semantic_weight * semantic_score + keyword_weight * keyword_score
+            score = semantic_weight * semantic_score + keyword_weight * keyword_score
 
-            if match_score >= threshold:
-                JobMatch.objects.update_or_create(
+            if score >= threshold:
+                UserJobMatch.objects.update_or_create(
                     user=user,
                     job_id=job_data["id"],
                     defaults={
-                        "match_score": round(match_score, 4),
-                        "semantic_score": round(semantic_score, 4),
-                        "keyword_score": round(keyword_score, 4),
+                        "score": round(score, 4),
+                        "skill_overlap": overlap,
+                        "skill_overlap_count": len(overlap),
                     },
                 )
 
