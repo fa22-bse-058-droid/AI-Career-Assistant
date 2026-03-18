@@ -7,191 +7,145 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
-# Lazy singleton — load MiniLM once per worker process
-_sentence_model = None
 
-
-def _get_sentence_model():
-    global _sentence_model
-    if _sentence_model is None:
-        try:
-            from sentence_transformers import SentenceTransformer
-            _sentence_model = SentenceTransformer("all-MiniLM-L6-v2")
-        except Exception as e:
-            logger.error("Failed to load SentenceTransformer: %s", e)
-    return _sentence_model
-
-
-@shared_task(
-    bind=True,
-    autoretry_for=(Exception,),
-    retry_backoff=True,
-    retry_kwargs={"max_retries": 3},
-    name="jobs.scrape_rozee",
-)
+@shared_task(bind=True, max_retries=3, name="jobs.scrape_rozee")
 def scrape_rozee(self):
-    from .scraper import RozeeScraper, save_jobs
-    from .models import ScraperLog
-    log = ScraperLog.objects.create(source="rozee", status="running")
+    """Scrape Rozee.pk and return the ScraperRun id."""
     try:
+        from .scrapers import RozeeScraper
         scraper = RozeeScraper()
-        jobs = scraper.scrape()
-        found, added = save_jobs(jobs)
-        log.status = "success"
-        log.jobs_found = found
-        log.jobs_added = added
-        log.finished_at = timezone.now()
-        log.save()
-        logger.info("Rozee scrape done: %d found, %d added", found, added)
+        run = scraper.run()
+        logger.info(
+            "Rozee scrape done: %d found, %d added",
+            run.jobs_found, run.jobs_added,
+        )
+        return str(run.id)
     except Exception as exc:
-        log.status = "failed"
-        log.error_message = str(exc)
-        log.finished_at = timezone.now()
-        log.save()
-        raise self.retry(exc=exc)
+        logger.error("scrape_rozee failed: %s", exc)
+        raise self.retry(exc=exc, countdown=60)
 
 
-@shared_task(
-    bind=True,
-    autoretry_for=(Exception,),
-    retry_backoff=True,
-    retry_kwargs={"max_retries": 3},
-    name="jobs.scrape_indeed",
-)
+@shared_task(bind=True, max_retries=3, name="jobs.scrape_indeed")
 def scrape_indeed(self):
-    from .scraper import IndeedScraper, save_jobs
-    from .models import ScraperLog
-    log = ScraperLog.objects.create(source="indeed", status="running")
+    """Scrape Indeed PK and return the ScraperRun id."""
     try:
+        from .scrapers import IndeedScraper
         scraper = IndeedScraper()
-        jobs = scraper.scrape()
-        found, added = save_jobs(jobs)
-        log.status = "success"
-        log.jobs_found = found
-        log.jobs_added = added
-        log.finished_at = timezone.now()
-        log.save()
-        logger.info("Indeed scrape done: %d found, %d added", found, added)
+        run = scraper.run()
+        logger.info(
+            "Indeed scrape done: %d found, %d added",
+            run.jobs_found, run.jobs_added,
+        )
+        return str(run.id)
     except Exception as exc:
-        log.status = "failed"
-        log.error_message = str(exc)
-        log.finished_at = timezone.now()
-        log.save()
-        raise self.retry(exc=exc)
+        logger.error("scrape_indeed failed: %s", exc)
+        raise self.retry(exc=exc, countdown=60)
 
 
-@shared_task(
-    bind=True,
-    autoretry_for=(Exception,),
-    retry_backoff=True,
-    retry_kwargs={"max_retries": 3},
-    name="jobs.scrape_linkedin",
-)
-def scrape_linkedin(self):
-    from .scraper import LinkedInScraper, save_jobs
-    from .models import ScraperLog
-    log = ScraperLog.objects.create(source="linkedin", status="running")
-    try:
-        scraper = LinkedInScraper()
-        jobs = scraper.scrape()
-        found, added = save_jobs(jobs)
-        log.status = "success"
-        log.jobs_found = found
-        log.jobs_added = added
-        log.finished_at = timezone.now()
-        log.save()
-        logger.info("LinkedIn scrape done: %d found, %d added", found, added)
-    except Exception as exc:
-        log.status = "failed"
-        log.error_message = str(exc)
-        log.finished_at = timezone.now()
-        log.save()
-        raise self.retry(exc=exc)
-
-
-@shared_task(name="jobs.scrape_all_sources")
-def scrape_all_sources():
+@shared_task(bind=True, max_retries=3, name="jobs.scrape_all_sources")
+def scrape_all_sources(self):
+    """Trigger both scrapers and schedule match recomputation afterwards."""
+    logger.info("Triggering all job scrapers")
     scrape_rozee.delay()
     scrape_indeed.delay()
-    scrape_linkedin.delay()
+    recompute_all_matches.delay()
+    return {"triggered": ["rozee", "indeed"]}
 
 
-@shared_task(name="jobs.purge_expired_jobs")
-def purge_expired_jobs():
-    from .models import JobListing
-    cutoff = timezone.now()
-    deleted, _ = JobListing.objects.filter(expires_at__lt=cutoff).delete()
-    logger.info("Purged %d expired jobs", deleted)
-    return deleted
+@shared_task(bind=True, max_retries=3, name="jobs.purge_expired_listings")
+def purge_expired_listings(self):
+    """Mark expired jobs inactive and remove their match records."""
+    from .models import JobListing, UserJobMatch
+    now = timezone.now()
+    expired_qs = JobListing.objects.filter(expires_at__lt=now, is_active=True)
+    expired_ids = list(expired_qs.values_list("id", flat=True))
+    count = expired_qs.update(is_active=False)
+    if expired_ids:
+        UserJobMatch.objects.filter(job_id__in=expired_ids).delete()
+    logger.info("Purged %d expired job listings", count)
+    return count
 
 
-@shared_task(name="jobs.compute_job_matches_for_user")
-def compute_job_matches_for_user(user_id: str):
-    """Compute MiniLM-based job matches for a user against active listings."""
-    from .models import JobListing, JobMatch
+# Keep old name as alias so existing beat schedule entry still resolves
+purge_expired_jobs = purge_expired_listings
+
+
+_MATCH_CHUNK_SIZE = 100  # jobs per chunk when computing matches
+
+
+@shared_task(bind=True, max_retries=3, name="jobs.compute_matches_for_user")
+def compute_matches_for_user(self, user_id: str):
+    """Compute cosine-similarity match scores for a single user."""
+    from .models import JobListing, UserJobMatch
     from apps.authentication.models import CustomUser
-    from apps.cv_analyzer.models import CVAnalysis, CVUpload
-    from django.conf import settings
+    from apps.cv_analyzer.models import CVUpload
 
     try:
         user = CustomUser.objects.get(pk=user_id)
-        latest_cv = (
-            CVUpload.objects.filter(user=user, status="completed")
-            .order_by("-uploaded_at")
-            .first()
-        )
-        if not latest_cv:
-            return
+    except CustomUser.DoesNotExist:
+        logger.warning("compute_matches_for_user: user %s not found", user_id)
+        return 0
 
+    # Get latest completed CV upload
+    latest_cv = (
+        CVUpload.objects.filter(user=user, status="completed")
+        .order_by("-uploaded_at")
+        .first()
+    )
+    if not latest_cv:
+        logger.info("compute_matches_for_user: no completed CV for user %s", user_id)
+        return 0
+
+    try:
         analysis = latest_cv.analysis
-        user_skills = " ".join(analysis.extracted_skills)
-        if not user_skills:
-            return
+        cv_skills = list(analysis.extracted_skills or [])
+        cv_text = analysis.raw_text or " ".join(cv_skills)
+    except Exception:
+        logger.warning("compute_matches_for_user: no CVAnalysis for user %s", user_id)
+        return 0
 
-        jobs = JobListing.objects.filter(is_active=True).values(
-            "id", "title", "description", "skills_required"
-        )
+    if not cv_text:
+        return 0
 
-        # Use lazy-loaded singleton model
-        model = _get_sentence_model()
-        if model is None:
-            logger.error("Sentence model not available for job matching")
-            return
-        from sentence_transformers import util
+    from .utils.matcher import batch_compute_matches
 
-        user_embedding = model.encode(user_skills, convert_to_tensor=True)
+    active_jobs = JobListing.objects.filter(is_active=True)
+    count = 0
 
-        semantic_weight = settings.JOB_MATCH_SEMANTIC_WEIGHT
-        keyword_weight = settings.JOB_MATCH_KEYWORD_WEIGHT
-        threshold = settings.JOB_MATCH_THRESHOLD
+    job_ids = list(active_jobs.values_list("id", flat=True))
+    for i in range(0, len(job_ids), _MATCH_CHUNK_SIZE):
+        chunk_ids = job_ids[i : i + _MATCH_CHUNK_SIZE]
+        chunk_qs = JobListing.objects.filter(id__in=chunk_ids)
+        matches = batch_compute_matches(cv_text, chunk_qs, cv_skills)
 
-        user_skills_lower = {s.lower() for s in analysis.extracted_skills}
+        for m in matches:
+            UserJobMatch.objects.update_or_create(
+                user=user,
+                job_id=m["job_id"],
+                defaults={
+                    "score": m["score"],
+                    "skill_overlap": m["skill_overlap"],
+                    "skill_overlap_count": m["skill_overlap_count"],
+                },
+            )
+            count += 1
 
-        for job_data in jobs:
-            job_text = f"{job_data['title']} {job_data['description']}"
-            job_embedding = model.encode(job_text, convert_to_tensor=True)
-            semantic_score = float(util.cos_sim(user_embedding, job_embedding)[0][0])
+    logger.info("Computed %d matches for user %s", count, user_id)
+    return count
 
-            job_skills = [s.lower() for s in (job_data["skills_required"] or [])]
-            if job_skills:
-                keyword_score = len(user_skills_lower & set(job_skills)) / len(job_skills)
-            else:
-                keyword_score = 0.5
 
-            match_score = semantic_weight * semantic_score + keyword_weight * keyword_score
-
-            if match_score >= threshold:
-                JobMatch.objects.update_or_create(
-                    user=user,
-                    job_id=job_data["id"],
-                    defaults={
-                        "match_score": round(match_score, 4),
-                        "semantic_score": round(semantic_score, 4),
-                        "keyword_score": round(keyword_score, 4),
-                    },
-                )
-
-        logger.info("Job matches computed for user %s", user_id)
-    except Exception as exc:
-        logger.error("Job matching failed for user %s: %s", user_id, exc)
-        raise
+@shared_task(bind=True, max_retries=3, name="jobs.recompute_all_matches")
+def recompute_all_matches(self):
+    """Re-trigger match computation for every user who has a completed CVAnalysis."""
+    from apps.cv_analyzer.models import CVAnalysis
+    user_ids = (
+        CVAnalysis.objects.select_related("cv__user")
+        .values_list("cv__user_id", flat=True)
+        .distinct()
+    )
+    count = 0
+    for uid in user_ids:
+        compute_matches_for_user.delay(str(uid))
+        count += 1
+    logger.info("Queued match recomputation for %d users", count)
+    return count
