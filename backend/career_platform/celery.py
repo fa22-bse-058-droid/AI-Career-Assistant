@@ -13,19 +13,24 @@ app.autodiscover_tasks()
 
 # Periodic tasks
 app.conf.beat_schedule = {
-    # Scrape jobs every 6 hours
-    "scrape-jobs-every-6-hours": {
-        "task": "apps.jobs.tasks.scrape_all_sources",
+    # Scrape all job sources every 6 hours
+    "scrape-all-jobs": {
+        "task": "jobs.scrape_all_sources",
         "schedule": crontab(minute=0, hour="*/6"),
     },
-    # Purge expired jobs daily at 2 AM
-    "purge-expired-jobs-daily": {
-        "task": "apps.jobs.tasks.purge_expired_jobs",
+    # Purge expired jobs daily at 02:00 UTC
+    "purge-expired-jobs": {
+        "task": "jobs.purge_expired_listings",
         "schedule": crontab(minute=0, hour=2),
+    },
+    # Recompute all matches daily at 04:00 UTC
+    "recompute-all-matches": {
+        "task": "jobs.recompute_all_matches",
+        "schedule": crontab(minute=0, hour=4),
     },
     # Auto-apply daily at 8 AM
     "auto-apply-daily": {
-        "task": "apps.auto_apply.tasks.run_auto_apply_for_all_users",
+        "task": "auto_apply.run_auto_apply_for_all_users",
         "schedule": crontab(minute=0, hour=8),
     },
     # Weekly digest every Sunday at 9 AM
