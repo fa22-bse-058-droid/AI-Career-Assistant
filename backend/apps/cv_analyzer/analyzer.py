@@ -113,23 +113,40 @@ JOB_ROLE_PROFILES = {
 
 
 def extract_text_from_pdf(file_bytes: bytes) -> str:
-    """Extract text from PDF file bytes."""
+    """Extract text from PDF file bytes.
+
+    Tries pdfminer.six first; falls back to PyPDF2 on any failure
+    (missing package OR parse error).  Raises a descriptive exception only
+    when both extractors fail or neither library is installed.
+    """
+    # ── Primary: pdfminer.six ──────────────────────────────────────────────
     try:
         import pdfminer.high_level as pdfminer_hl
         text = pdfminer_hl.extract_text(io.BytesIO(file_bytes))
         return text or ""
     except ImportError:
-        # pdfminer.six not installed; fall through to PyPDF2 fallback below
+        # pdfminer.six not installed — try PyPDF2 below
         pass
     except Exception as e:
-        logger.error("pdfminer PDF extraction failed: %s", e)
-        raise Exception(f"PDF extraction failed: {e}") from e
+        # pdfminer is installed but failed to parse this file — try PyPDF2
+        logger.warning("pdfminer extraction failed, trying PyPDF2 fallback: %s", e)
 
+    # ── Fallback: PyPDF2 ───────────────────────────────────────────────────
     try:
         import PyPDF2
         reader = PyPDF2.PdfReader(io.BytesIO(file_bytes))
         text = "\n".join(page.extract_text() or "" for page in reader.pages)
         return text
+    except ImportError as e:
+        logger.error(
+            "PDF extraction failed: neither pdfminer.six nor PyPDF2 is installed. "
+            "Ensure pdfminer.six and PyPDF2 are listed in backend/requirements.txt "
+            "and that all backend containers have been rebuilt."
+        )
+        raise Exception(
+            "PDF extraction failed: required libraries (pdfminer.six / PyPDF2) are "
+            "not installed in this container. Rebuild the backend Docker image."
+        ) from e
     except Exception as e:
         logger.error("PyPDF2 extraction failed: %s", e)
         raise Exception(f"PDF extraction failed: {e}") from e
