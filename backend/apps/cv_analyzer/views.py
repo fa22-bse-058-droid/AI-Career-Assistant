@@ -1,6 +1,7 @@
 """
 Views for CV Analyzer app.
 """
+import re
 import uuid
 import logging
 from django.core.cache import cache
@@ -21,6 +22,88 @@ logger = logging.getLogger(__name__)
 
 ALLOWED_EXTENSIONS = {"pdf", "docx", "doc"}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+
+# ---------------------------------------------------------------------------
+# Company requirements for acceptance-chance calculation
+# ---------------------------------------------------------------------------
+
+COMPANY_REQUIREMENTS: dict = {
+    "DevSinc": {
+        "required": ["React", "Node", "Python", "Docker", "AWS"],
+        "color": "#4F46E5",
+        "logo_initial": "D",
+        "improvement_tips": {
+            "Docker": "Build and containerise a sample project with Docker",
+            "AWS": "Obtain the AWS Cloud Practitioner certification",
+            "React": "Build a React SPA as a portfolio project",
+            "Node": "Build a Node.js REST API",
+            "Python": "Build a Python automation or backend project",
+        },
+    },
+    "10Pearls": {
+        "required": ["React", "Angular", "Java", "Agile", "AWS"],
+        "color": "#0EA5E9",
+        "logo_initial": "10",
+        "improvement_tips": {
+            "React": "Build a React SPA as a portfolio project",
+            "Angular": "Complete an Angular crash course",
+            "Java": "Build a Java Spring Boot project",
+            "Agile": "Get a Scrum Master or SAFe Agile certification",
+            "AWS": "Obtain the AWS Cloud Practitioner certification",
+        },
+    },
+    "Netsol": {
+        "required": ["Java", ".NET", "Oracle", "SQL", "Finance domain"],
+        "color": "#10B981",
+        "logo_initial": "N",
+        "improvement_tips": {
+            "Java": "Build a Java Spring Boot project",
+            ".NET": "Build a .NET REST API",
+            "Oracle": "Learn Oracle SQL through Oracle Academy",
+            "SQL": "Practice SQL on HackerRank / LeetCode",
+            "Finance domain": "Study ERP and finance domain concepts",
+        },
+    },
+    "Arbisoft": {
+        "required": ["Python", "Django", "React", "PostgreSQL", "Git"],
+        "color": "#F59E0B",
+        "logo_initial": "A",
+        "improvement_tips": {
+            "Python": "Build a Python automation or backend project",
+            "Django": "Build a Django REST API project",
+            "React": "Build a React SPA as a portfolio project",
+            "PostgreSQL": "Learn PostgreSQL through practice exercises",
+            "Git": "Contribute to an open source project on GitHub",
+        },
+    },
+    "Systems Limited": {
+        "required": ["Java", "SAP", "Oracle", ".NET", "SQL"],
+        "color": "#EF4444",
+        "logo_initial": "SL",
+        "improvement_tips": {
+            "Java": "Build a Java Spring Boot project",
+            "SAP": "Complete an SAP Fundamentals training course",
+            "Oracle": "Learn Oracle SQL through Oracle Academy",
+            ".NET": "Build a .NET REST API",
+            "SQL": "Practice SQL on HackerRank / LeetCode",
+        },
+    },
+}
+
+
+MAX_IMPROVEMENT_TIPS = 4
+
+
+def _skill_matches(required: str, extracted_skills: list) -> bool:
+    """Case-insensitive word-boundary match to avoid false positives (e.g. Java vs JavaScript, SQL vs NoSQL)."""
+    # Negative lookbehind/lookahead for alphanumeric chars and underscore ensures we match
+    # whole tokens: "Java" won't match "JavaScript", "SQL" won't match "NoSQL".
+    # Trailing digits/dots are allowed so "React" matches "React.js" and "Node" matches "Node.js".
+    pattern = re.compile(
+        r'(?<![a-zA-Z0-9_])' + re.escape(required) + r'(?![a-zA-Z_])',
+        re.IGNORECASE,
+    )
+    return any(pattern.search(skill) for skill in extracted_skills)
 
 
 @method_decorator(ratelimit(key="user", rate="10/h", method="POST", block=True), name="post")
@@ -111,3 +194,56 @@ class CVAnalysisView(APIView):
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
 
         return Response(CVAnalysisSerializer(analysis).data)
+
+
+class CompanyMatchView(APIView):
+    """Return acceptance-chance percentages for well-known Pakistani/global tech companies."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, cv_id):
+        try:
+            cv = CVUpload.objects.get(pk=cv_id, user=request.user)
+            analysis = cv.analysis
+        except (CVUpload.DoesNotExist, CVAnalysis.DoesNotExist):
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        extracted = analysis.extracted_skills  # list[str]
+        if not extracted:
+            return Response(
+                {"detail": "CV has not been fully analysed yet. Please wait for processing to complete."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        companies = []
+
+        for company_name, info in COMPANY_REQUIREMENTS.items():
+            required = info["required"]
+            tips = info["improvement_tips"]
+
+            matched = [r for r in required if _skill_matches(r, extracted)]
+            missing = [r for r in required if not _skill_matches(r, extracted)]
+
+            match_pct = round((len(matched) / len(required)) * 100) if required else 0
+
+            improvements = [tips.get(s, f"Add {s} to your skill set") for s in missing[:MAX_IMPROVEMENT_TIPS]]
+            if not improvements:
+                improvements = ["Polish existing projects", "Contribute to open source"]
+
+            if match_pct >= 70:
+                verdict = "Strong candidate"
+            elif match_pct >= 40:
+                verdict = "Moderate candidate – upskilling needed"
+            else:
+                verdict = "Needs significant improvement"
+
+            companies.append({
+                "name": company_name,
+                "match_percentage": match_pct,
+                "missing_skills": missing,
+                "improvements": improvements,
+                "verdict": verdict,
+                "color": info["color"],
+                "logo_initial": info["logo_initial"],
+            })
+
+        return Response({"companies": companies})
