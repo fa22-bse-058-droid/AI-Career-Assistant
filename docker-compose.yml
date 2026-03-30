@@ -35,13 +35,16 @@ services:
       timeout: 3s
       retries: 5
 
-  # ── Django Backend ───────────────────────────────────────────────────────────
+  # ── Django Backend ────────────────────────────────────────��──────────────────
   django:
     build:
       context: ./backend
       dockerfile: Dockerfile
       target: final
     restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     env_file:
       - ./backend/.env
     volumes:
@@ -64,6 +67,9 @@ services:
       dockerfile: Dockerfile
       target: final
     restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     env_file:
       - ./backend/.env
     volumes:
@@ -82,6 +88,9 @@ services:
       dockerfile: Dockerfile
       target: final
     restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     env_file:
       - ./backend/.env
     volumes:
