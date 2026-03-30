@@ -39,6 +39,20 @@ export interface CVAnalysis {
   updated_at: string
 }
 
+export interface CompanyMatch {
+  name: string
+  match_percentage: number
+  missing_skills: string[]
+  improvements: string[]
+  verdict: string
+  color: string
+  logo_initial: string
+}
+
+export interface CompanyMatchResponse {
+  companies: CompanyMatch[]
+}
+
 // ---------------------------------------------------------------------------
 // API functions
 // ---------------------------------------------------------------------------
@@ -86,6 +100,14 @@ export async function getCVResults(cvId: string): Promise<CVUploadResponse> {
  */
 export async function getCVHistory(): Promise<CVUploadResponse[]> {
   const { data } = await api.get<CVUploadResponse[]>('/cv/list/')
+  return data
+}
+
+/**
+ * Retrieve company acceptance-chance analysis for a completed CV.
+ */
+export async function getCompanyMatch(cvId: string): Promise<CompanyMatchResponse> {
+  const { data } = await api.get<CompanyMatchResponse>(`/cv/${cvId}/company-match/`)
   return data
 }
 

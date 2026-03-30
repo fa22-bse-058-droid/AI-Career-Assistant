@@ -3,7 +3,7 @@ import { useDropzone } from 'react-dropzone'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { Upload, XCircle, RefreshCw, AlertTriangle, CheckCircle, TrendingUp, User, BarChart2 } from 'lucide-react'
-import { uploadCV, getCVStatus } from '@/api/cvApi'
+import { uploadCV, getCVStatus, getCompanyMatch, CompanyMatch } from '@/api/cvApi'
 
 function ScoreGauge({ score, grade }: { score: number; grade: string }) {
   const gradeColors: Record<string, string> = {
@@ -17,8 +17,8 @@ function ScoreGauge({ score, grade }: { score: number; grade: string }) {
   const dashOffset = circumference - (score / 100) * circumference
 
   return (
-    <div className="flex flex-col items-center">
-      <svg width="120" height="120" className="-rotate-90">
+    <div className="relative flex items-center justify-center" style={{ width: 120, height: 120 }}>
+      <svg width="120" height="120" className="-rotate-90 absolute inset-0">
         <circle cx="60" cy="60" r="45" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
         <motion.circle
           cx="60"
@@ -35,16 +35,16 @@ function ScoreGauge({ score, grade }: { score: number; grade: string }) {
           style={{ filter: `drop-shadow(0 0 8px ${color})` }}
         />
       </svg>
-      <div className="-mt-[70px] text-center">
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
         <motion.p
-          className="text-3xl font-bold text-white"
+          className="text-3xl font-bold text-white leading-none"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
         >
           {score.toFixed(0)}
         </motion.p>
-        <p className="text-xs text-slate-400 capitalize mt-1">{grade}</p>
+        <p className="text-xs text-slate-400 capitalize mt-1.5">{grade}</p>
       </div>
     </div>
   )
@@ -310,6 +310,107 @@ function DeepAnalysisSection({ deep }: { deep: any }) {
   )
 }
 
+const STRONG_MATCH_THRESHOLD = 70
+const MODERATE_MATCH_THRESHOLD = 40
+const MATCH_COLOR_GREEN = '#10B981'
+const MATCH_COLOR_YELLOW = '#F59E0B'
+const MATCH_COLOR_RED = '#EF4444'
+
+function CompanyMatchSection({ companies }: { companies: CompanyMatch[] }) {
+  const barColor = (pct: number) => {
+    if (pct >= STRONG_MATCH_THRESHOLD) return MATCH_COLOR_GREEN
+    if (pct >= MODERATE_MATCH_THRESHOLD) return MATCH_COLOR_YELLOW
+    return MATCH_COLOR_RED
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="glass-card p-6"
+    >
+      <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+        <TrendingUp size={18} className="text-accent-blue" />
+        Company Match Analysis
+      </h2>
+      <div className="space-y-4">
+        {companies.map((company, idx) => (
+          <motion.div
+            key={company.name}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: idx * 0.08 }}
+            className="p-4 rounded-xl bg-white/3 border border-white/5 space-y-3"
+          >
+            {/* Company header */}
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                style={{ backgroundColor: `${company.color}30`, border: `1px solid ${company.color}50` }}
+              >
+                <span style={{ color: company.color }}>{company.logo_initial}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-medium text-sm">{company.name}</p>
+                <p className="text-xs text-slate-400 truncate">{company.verdict}</p>
+              </div>
+              <span
+                className="text-lg font-bold flex-shrink-0"
+                style={{ color: barColor(company.match_percentage) }}
+              >
+                {company.match_percentage}%
+              </span>
+            </div>
+
+            {/* Progress bar */}
+            <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+              <motion.div
+                className="h-full rounded-full"
+                style={{ background: barColor(company.match_percentage) }}
+                initial={{ width: 0 }}
+                animate={{ width: `${company.match_percentage}%` }}
+                transition={{ duration: 1, ease: 'easeOut', delay: idx * 0.08 + 0.2 }}
+              />
+            </div>
+
+            {/* Missing skills */}
+            {company.missing_skills.length > 0 && (
+              <div>
+                <p className="text-xs text-red-400 mb-1.5">Missing Skills</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {company.missing_skills.map((skill) => (
+                    <span
+                      key={skill}
+                      className="text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Improvements */}
+            {company.improvements.length > 0 && (
+              <div>
+                <p className="text-xs text-accent-blue mb-1.5">To reach 90%+</p>
+                <ul className="space-y-1">
+                  {company.improvements.map((tip, i) => (
+                    <li key={i} className="flex items-start gap-2 text-xs text-slate-300">
+                      <span className="mt-1 w-1 h-1 rounded-full bg-accent-blue flex-shrink-0" />
+                      {tip}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </motion.div>
+        ))}
+      </div>
+    </motion.div>
+  )
+}
+
 /** Returns true only when the backend has produced a complete deep-analysis result. */
 function isValidDeepAnalysis(value: Record<string, unknown> | null | undefined): boolean {
   return !!value && typeof value === 'object' && 'overall_score' in value
@@ -354,6 +455,12 @@ export default function CVAnalyzerPage() {
   const analysis = cvStatus?.analysis
   const isProcessing = cvStatus?.status === 'processing' || cvStatus?.status === 'pending'
   const deepAnalysis = isValidDeepAnalysis(analysis?.deep_analysis) ? analysis!.deep_analysis : null
+
+  const { data: companyMatchData } = useQuery({
+    queryKey: ['cv-company-match', uploadedCvId],
+    queryFn: () => getCompanyMatch(uploadedCvId!),
+    enabled: !!uploadedCvId && cvStatus?.status === 'completed',
+  })
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -557,6 +664,11 @@ export default function CVAnalyzerPage() {
 
             {/* Deep ATS Analysis Section */}
             {deepAnalysis && <DeepAnalysisSection deep={deepAnalysis} />}
+
+            {/* Company Match Analysis */}
+            {companyMatchData && companyMatchData.companies.length > 0 && (
+              <CompanyMatchSection companies={companyMatchData.companies} />
+            )}
 
             {/* Upload another */}
             <button
