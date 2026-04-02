@@ -10,6 +10,11 @@ services:
       MYSQL_DATABASE: career_platform
       MYSQL_USER: career_user
       MYSQL_PASSWORD: career_password
+    command:
+      --wait_timeout=28800
+      --max_allowed_packet=256M
+      --net_read_timeout=300
+      --net_write_timeout=300
     volumes:
       - mysql_data:/var/lib/mysql
     ports:
@@ -35,7 +40,7 @@ services:
       timeout: 3s
       retries: 5
 
-  # ── Django Backend ────────────────────────────────────────��──────────────────
+  # ── Django Backend ───────────────────────────────────────────────────────────
   django:
     build:
       context: ./backend
