@@ -11,7 +11,8 @@ if not exist "%VENV_ACTIVATE%" (
   echo [ERROR] Python virtual environment not found at:
   echo         %VENV_ACTIVATE%
   echo Create it first from repository root:
-  echo   cd /d %ROOT_DIR%^&^& python -m venv backend\.venv
+  echo   1^) cd /d %ROOT_DIR%
+  echo   2^) python -m venv backend\.venv
   exit /b 1
 )
 
