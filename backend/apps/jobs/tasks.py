@@ -2,24 +2,23 @@
 Celery tasks for job scraping, matching, and maintenance.
 """
 import logging
+from functools import lru_cache
+
 from celery import shared_task
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
-# Lazy singleton — load MiniLM once per worker process
-_sentence_model = None
 
-
+@lru_cache(maxsize=1)
 def _get_sentence_model():
-    global _sentence_model
-    if _sentence_model is None:
-        try:
-            from sentence_transformers import SentenceTransformer
-            _sentence_model = SentenceTransformer("all-MiniLM-L6-v2")
-        except Exception as e:
-            logger.error("Failed to load SentenceTransformer: %s", e)
-    return _sentence_model
+    try:
+        from sentence_transformers import SentenceTransformer
+
+        return SentenceTransformer("all-MiniLM-L6-v2")
+    except Exception as e:
+        logger.error("Failed to load SentenceTransformer: %s", e)
+        return None
 
 
 @shared_task(

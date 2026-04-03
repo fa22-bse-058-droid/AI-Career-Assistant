@@ -3,6 +3,7 @@ WebSocket consumer for AI Chatbot using Django Channels.
 """
 import json
 import logging
+from functools import lru_cache
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
@@ -15,22 +16,18 @@ SYSTEM_PROMPT = (
     "CV writing, interview preparation, and career advice. Be concise and helpful."
 )
 
-# Lazy-loaded model singletons — loaded once per worker process
-_chatbot_tokenizer = None
-_chatbot_model = None
-
-
+@lru_cache(maxsize=1)
 def _get_chatbot_models():
-    global _chatbot_tokenizer, _chatbot_model
-    if _chatbot_tokenizer is None:
-        try:
-            from transformers import BlenderbotTokenizer, BlenderbotForConditionalGeneration
-            model_name = "facebook/blenderbot-400M-distill"
-            _chatbot_tokenizer = BlenderbotTokenizer.from_pretrained(model_name)
-            _chatbot_model = BlenderbotForConditionalGeneration.from_pretrained(model_name)
-        except Exception as e:
-            logger.warning("BlenderBot not available: %s", e)
-    return _chatbot_tokenizer, _chatbot_model
+    try:
+        from transformers import BlenderbotTokenizer, BlenderbotForConditionalGeneration
+
+        model_name = "facebook/blenderbot-400M-distill"
+        tokenizer = BlenderbotTokenizer.from_pretrained(model_name)
+        model = BlenderbotForConditionalGeneration.from_pretrained(model_name)
+        return tokenizer, model
+    except Exception as e:
+        logger.warning("BlenderBot not available: %s", e)
+        return None, None
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
