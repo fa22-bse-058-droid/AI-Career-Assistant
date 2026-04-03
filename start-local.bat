@@ -10,8 +10,8 @@ set VENV_ACTIVATE=%ROOT_DIR%backend\.venv\Scripts\activate.bat
 if not exist "%VENV_ACTIVATE%" (
   echo [ERROR] Python virtual environment not found at:
   echo         %VENV_ACTIVATE%
-  echo Create it first:
-  echo   python -m venv backend\.venv
+  echo Create it first from repository root:
+  echo   cd /d %ROOT_DIR%^&^& python -m venv backend\.venv
   exit /b 1
 )
 
