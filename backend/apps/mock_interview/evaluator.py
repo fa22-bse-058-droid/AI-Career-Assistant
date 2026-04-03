@@ -2,23 +2,17 @@
 Interview evaluation engine using keyword matching + MiniLM semantic similarity.
 """
 import logging
+from functools import lru_cache
 from typing import List
 
 logger = logging.getLogger(__name__)
 
-# Lazy singleton — loaded once on first use
-_sentence_model = None
 
-
+@lru_cache(maxsize=1)
 def _get_sentence_model():
-    global _sentence_model
-    if _sentence_model is None:
-        try:
-            from sentence_transformers import SentenceTransformer
-            _sentence_model = SentenceTransformer("all-MiniLM-L6-v2")
-        except Exception as e:
-            logger.error("Failed to load SentenceTransformer: %s", e)
-    return _sentence_model
+    from sentence_transformers import SentenceTransformer
+
+    return SentenceTransformer("all-MiniLM-L6-v2")
 
 
 def evaluate_response(

@@ -1,10 +1,9 @@
 """
 Semantic job-matching utilities using SentenceTransformers and sklearn.
 """
-import numpy as np
+from functools import lru_cache
 
-# Module-level lazy singleton for the SentenceTransformer model
-_model = None
+import numpy as np
 
 # Thresholds for match labels and auto-apply eligibility
 AUTO_APPLY_THRESHOLD = 0.65
@@ -13,14 +12,12 @@ MATCH_LABEL_GOOD = 0.65
 MATCH_LABEL_FAIR = 0.50
 
 
+@lru_cache(maxsize=1)
 def get_model():
     """Load and cache the MiniLM model (loaded once per process)."""
-    global _model
-    if _model is None:
-        from sentence_transformers import SentenceTransformer
+    from sentence_transformers import SentenceTransformer
 
-        _model = SentenceTransformer("all-MiniLM-L6-v2")
-    return _model
+    return SentenceTransformer("all-MiniLM-L6-v2")
 
 
 def compute_cosine_similarity(text1: str, text2: str) -> float:
