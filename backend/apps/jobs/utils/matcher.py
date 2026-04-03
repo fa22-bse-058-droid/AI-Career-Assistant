@@ -107,7 +107,10 @@ def batch_compute_matches(
 
     model = get_model()
     if model is None:
-        logger.warning("MiniLM model unavailable; returning no batch job matches")
+        logger.warning(
+            "MiniLM model unavailable (failed to load or sentence-transformers missing); "
+            "returning no batch job matches"
+        )
         return []
 
     # Encode CV once
