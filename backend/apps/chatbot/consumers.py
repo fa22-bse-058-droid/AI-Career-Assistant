@@ -18,12 +18,16 @@ SYSTEM_PROMPT = (
 
 @lru_cache(maxsize=1)
 def _get_chatbot_models():
-    from transformers import BlenderbotTokenizer, BlenderbotForConditionalGeneration
+    try:
+        from transformers import BlenderbotTokenizer, BlenderbotForConditionalGeneration
 
-    model_name = "facebook/blenderbot-400M-distill"
-    tokenizer = BlenderbotTokenizer.from_pretrained(model_name)
-    model = BlenderbotForConditionalGeneration.from_pretrained(model_name)
-    return tokenizer, model
+        model_name = "facebook/blenderbot-400M-distill"
+        tokenizer = BlenderbotTokenizer.from_pretrained(model_name)
+        model = BlenderbotForConditionalGeneration.from_pretrained(model_name)
+        return tokenizer, model
+    except Exception as e:
+        logger.warning("BlenderBot not available: %s", e)
+        return None, None
 
 
 class ChatConsumer(AsyncWebsocketConsumer):

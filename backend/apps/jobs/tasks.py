@@ -12,9 +12,13 @@ logger = logging.getLogger(__name__)
 
 @lru_cache(maxsize=1)
 def _get_sentence_model():
-    from sentence_transformers import SentenceTransformer
+    try:
+        from sentence_transformers import SentenceTransformer
 
-    return SentenceTransformer("all-MiniLM-L6-v2")
+        return SentenceTransformer("all-MiniLM-L6-v2")
+    except Exception as e:
+        logger.error("Failed to load SentenceTransformer: %s", e)
+        return None
 
 
 @shared_task(

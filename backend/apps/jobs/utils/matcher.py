@@ -2,8 +2,11 @@
 Semantic job-matching utilities using SentenceTransformers and sklearn.
 """
 from functools import lru_cache
+import logging
 
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 # Thresholds for match labels and auto-apply eligibility
 AUTO_APPLY_THRESHOLD = 0.65
@@ -15,9 +18,13 @@ MATCH_LABEL_FAIR = 0.50
 @lru_cache(maxsize=1)
 def get_model():
     """Load and cache the MiniLM model (loaded once per process)."""
-    from sentence_transformers import SentenceTransformer
+    try:
+        from sentence_transformers import SentenceTransformer
 
-    return SentenceTransformer("all-MiniLM-L6-v2")
+        return SentenceTransformer("all-MiniLM-L6-v2")
+    except Exception as e:
+        logger.error("Failed to load SentenceTransformer model: %s", e)
+        return None
 
 
 def compute_cosine_similarity(text1: str, text2: str) -> float:
@@ -25,6 +32,8 @@ def compute_cosine_similarity(text1: str, text2: str) -> float:
     from sklearn.metrics.pairwise import cosine_similarity
 
     model = get_model()
+    if model is None:
+        return 0.0
     embeddings = model.encode([text1, text2])
     score = cosine_similarity([embeddings[0]], [embeddings[1]])[0][0]
     return float(np.clip(score, 0.0, 1.0))
@@ -97,6 +106,8 @@ def batch_compute_matches(
         return []
 
     model = get_model()
+    if model is None:
+        return []
 
     # Encode CV once
     cv_embedding = model.encode([cv_text])
