@@ -89,7 +89,7 @@ DATABASES = {
         "NAME": env("DB_NAME", default="career_platform"),
         "USER": env("DB_USER", default="career_user"),
         "PASSWORD": env("DB_PASSWORD", default="career_password"),
-        "HOST": env("DB_HOST", default="mysql"),
+        "HOST": env("DB_HOST", default="localhost"),
         "PORT": env("DB_PORT", default="3306"),
         "OPTIONS": {
             "charset": "utf8mb4",
@@ -99,7 +99,7 @@ DATABASES = {
 }
 
 # Redis
-REDIS_URL = env("REDIS_URL", default="redis://redis:6379/0")
+REDIS_URL = env("REDIS_URL", default="redis://localhost:6379/0")
 
 # Cache
 CACHES = {
@@ -225,7 +225,7 @@ CSP_FONT_SRC = ("'self'", "fonts.gstatic.com")
 CSP_IMG_SRC = ("'self'", "data:", "blob:")
 
 # FastAPI AI service
-AI_SERVICE_URL = env("AI_SERVICE_URL", default="http://fastapi:8001")
+AI_SERVICE_URL = env("AI_SERVICE_URL", default="http://localhost:8001")
 
 # CV scoring weights
 CV_SCORING = {
